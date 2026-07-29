@@ -1445,12 +1445,25 @@ async function saveKey(i,clear){
 }
 
 /* ===================== 接入引导 ===================== */
-function vOnboard(){
+async function vOnboard(){
   const s=ST.obStep;
+  if(!KEYS)KEYS=await api('/api/keys');
+  if(!Array.isArray(KEYS))KEYS=[];
+  const okCn=KEYS.filter(k=>k.ok===true&&k.market==='cn').length;
+  const okGl=KEYS.filter(k=>k.ok===true&&k.market==='global').length;
+  const noKey=!(okCn+okGl);
   const bars=[1,2,3].map(i=>`<span style="flex:1;height:3px;border-radius:2px;background:${s>=i?'var(--accent)':'#3f424d'}"></span>`).join('');
   let body='';
   if(s===1){
     body=`<div style="display:flex;flex-direction:column;gap:14px">
+      ${noKey?`<div class="card" style="box-shadow:0 0 0 1px var(--a700);padding:14px 16px;gap:6px">
+        <div style="font-size:13.5px;font-weight:500">⚠ 还没有配置任何引擎 API Key</div>
+        <div style="font-size:12.5px;color:var(--t400);line-height:1.6">自动引导中的「答案采样」和「AI 推导问题库 / 品牌事实」需要至少一个引擎 Key（推荐先配 DeepSeek 或智谱GLM）。不配置也能创建——但只会做抓站与站点体检，问题库和品牌事实需要手动填写。</div>
+        <div class="row" style="margin-top:4px">
+          <button class="btn btn-secondary" style="font-size:12.5px" onclick="go('settings')">去配置 Key →</button>
+          <span class="muted" style="font-size:11.5px">配好后回到这里继续</span></div>
+      </div>`
+      :`<div class="muted" style="font-size:12px">已配置引擎：国内 ${okCn} 个 · 海外 ${okGl} 个（可在「设置」增改）${(ST.obMkt||'both')!=='global'&&!okCn?'——注意国内市场尚无可用 Key':''}${(ST.obMkt||'both')!=='cn'&&!okGl?'——注意海外市场尚无可用 Key':''}</div>`}
       <div class="field"><label>官网域名 *</label><input id="ob-url" class="input" placeholder="https://example.com" value="${esc(ST.obUrl||'')}"></div>
       <div class="field"><label>品牌名称（留空自动从网页识别）</label><input id="ob-name" class="input" value="${esc(ST.obName||'')}"></div>
       <div class="field"><label>目标市场</label><div class="seg">
@@ -1491,6 +1504,14 @@ async function obCreate(){
   if(!url){toast('请填写官网地址','err');return}
   ST.obUrl=url;ST.obName=$('#ob-name').value.trim();
   ST.obMkt=document.querySelector('input[name=obm]:checked').value;
+  // 没配任何引擎 Key：明确告知会缺什么,让用户选择继续或先去配置
+  const okKeys=(KEYS||[]).filter(k=>k.ok===true);
+  if(!okKeys.length&&!confirm('还没有配置任何引擎 API Key。\n\n继续创建将跳过「答案采样」与「AI 推导问题库/品牌事实」——只做抓站和站点体检，问题库与品牌事实需要手动填写。\n\n建议先到「设置」配置至少一个 Key（如 DeepSeek / 智谱GLM）。\n\n仍要继续吗？'))
+    {go('settings');return}
+  const mkNeed=ST.obMkt==='both'?['cn','global']:[ST.obMkt];
+  const miss=mkNeed.filter(m=>!okKeys.some(k=>k.market===m));
+  if(okKeys.length&&miss.length&&!confirm(`所选市场里 ${miss.map(m=>m==='cn'?'国内':'海外').join('、')} 尚无已配置的引擎 Key，该市场的自动采样会被跳过（可稍后补 Key 或用人工采样表）。\n\n仍要继续吗？`))
+    {go('settings');return}
   ST.obNoSample=$('#ob-nosample').checked;
   const r=await post('/api/init',{url,name:ST.obName,
     market:ST.obMkt,max_pages:25});
