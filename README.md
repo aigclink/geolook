@@ -12,7 +12,9 @@
 
 ![产品演示](docs/demo.gif)
 
-📹 [高清版演示视频 (mp4)](docs/demo.mp4) · 🖼 [全部页面截图](docs/screenshots/)
+🌐 [官网 geolook.cc](https://geolook.cc) · 🔍 [在线演示（只读）](https://geolook.cc/demo/) · 📹 [高清演示视频 (mp4)](docs/demo.mp4) · 🖼 [全部截图](docs/screenshots/)
+
+<sub>域名生效前可用镜像：[geolook-three.vercel.app](https://geolook-three.vercel.app) · [演示](https://geolook-three.vercel.app/demo/)</sub>
 
 </div>
 

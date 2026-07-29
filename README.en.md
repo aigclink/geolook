@@ -12,7 +12,9 @@ For a specific project: status analysis → diagnosis → strategy → implement
 
 ![Product demo](docs/demo.gif)
 
-📹 [HD demo video (mp4)](docs/demo.mp4) · 🖼 [All screenshots](docs/screenshots/)
+🌐 [Website geolook.cc](https://geolook.cc) · 🔍 [Live demo (read-only)](https://geolook.cc/demo/) · 📹 [HD demo video (mp4)](docs/demo.mp4) · 🖼 [All screenshots](docs/screenshots/)
+
+<sub>Mirror while DNS propagates: [geolook-three.vercel.app](https://geolook-three.vercel.app) · [demo](https://geolook-three.vercel.app/demo/)</sub>
 
 </div>
 
