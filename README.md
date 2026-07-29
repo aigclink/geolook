@@ -10,13 +10,13 @@
 
 ![License](https://img.shields.io/badge/license-MIT-9184d9) ![Python](https://img.shields.io/badge/python-3.9%2B-9184d9) ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-9184d9) ![Deps](https://img.shields.io/badge/deps-requests%20·%20bs4%20·%20lxml-9184d9)
 
-📹 [40 秒产品演示](docs/demo.mp4) · 🖼 [全部页面截图](docs/screenshots/)
+![产品演示](docs/demo.gif)
+
+📹 [高清版演示视频 (mp4)](docs/demo.mp4) · 🖼 [全部页面截图](docs/screenshots/)
 
 </div>
 
 > GEO = 生成式引擎优化（Generative Engine Optimization）：让 DeepSeek、豆包、ChatGPT、Perplexity 这些 AI 引擎在回答用户问题时，**主动提到并引用你的品牌**。不是地理信息，也不是传统 SEO。
-
-![总览](docs/screenshots/overview.png)
 
 ## 一、解决什么问题
 
