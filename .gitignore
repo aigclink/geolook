@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.DS_Store
+work/
+.env
+.jobs/
+docs/plans/
+web/
+nohup.out

@@ -1,0 +1,1730 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GeoLook · 生成式引擎优化平台</title>
+<style>
+/* Nocturne 设计系统令牌（取自设计稿 styles.css，暗色单主题） */
+:root{
+  --bg:#161826; --surface:#232532; --side:#1b1d2b; --deep:#1b1d2b;
+  --text:#e9e9ed; --t400:#b2b6ca; --t500:#9397ab; --t600:#75798c; --t700:#595d6c;
+  --accent:#9184d9; --a100:#f5f4ff; --a300:#d2cefd; --a400:#b5abfc;
+  --a700:#5d5294; --a800:#423a6a; --a900:#2b2741;
+  --n800:#3f424d; --n900:#292b31;
+  --divider:rgba(233,233,237,0.16); --line:rgba(233,233,237,0.08);
+  --r-md:8px; --r-lg:14px;
+  --sh-sm:0 0 0 1px #3f424d; --sh-md:0 0 0 1px #595d6c,0 6px 18px rgba(0,0,0,.55);
+  --font:"Inter",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 var(--font)}
+h1,h2,h3,h4{font-weight:500;line-height:1.12;letter-spacing:-.015em;margin:0 0 6px}
+h2{font-size:32px} h3{font-size:25px} h4{font-size:20px}
+p{margin:0 0 8px}
+a{color:var(--accent);text-underline-offset:3px}
+::selection{background:rgba(145,132,217,.3)}
+:focus{outline:none} :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#3f424d;border-radius:8px}
+::-webkit-scrollbar-track{background:transparent}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;
+  font:500 14px/1.2 var(--font);color:var(--text);background:transparent;
+  border:1px solid transparent;padding:7px 12px;border-radius:var(--r-md);text-decoration:none}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-primary{color:var(--accent);border-color:var(--accent)}
+.btn-primary:hover{background:rgba(145,132,217,.12)}
+.btn-secondary{border-color:var(--divider)}
+.btn-secondary:hover{background:rgba(233,233,237,.07)}
+.btn-ghost{color:var(--accent);padding-inline:4px}
+.btn-ghost:hover{background:rgba(145,132,217,.10)}
+.btn-block{width:100%}
+.card{display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:var(--r-md);background:var(--surface)}
+.elev{box-shadow:var(--sh-sm)}
+.kicker{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.tag{display:inline-flex;align-items:center;font-size:11px;letter-spacing:.02em;padding:3px 10px;border-radius:6px;white-space:nowrap}
+.tag-accent{background:var(--a800);color:var(--a100)}
+.tag-neutral{background:var(--n800);color:#f3f5fe}
+.tag-dim{background:var(--n900);color:var(--t500)}
+.tag-outline{border:1px solid var(--accent);color:var(--accent);background:transparent}
+.pill-good{background:var(--a900);color:var(--a300)}
+.pill-warn{background:var(--n800);color:#e4e7f5}
+.tbl{overflow-x:auto}
+.tbl .table{min-width:820px}
+.table{width:100%;border-collapse:collapse;font-size:14px}
+.table th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--t600);padding:6px 8px;white-space:nowrap}
+.table td{padding:8px;vertical-align:top}
+.table thead tr{background:linear-gradient(to right,transparent,var(--divider) 48px,var(--divider) calc(100% - 48px),transparent) no-repeat bottom/100% 1px}
+.table tbody tr{background:linear-gradient(to right,transparent,var(--line) 48px,var(--line) calc(100% - 48px),transparent) no-repeat bottom/100% 1px}
+.table tbody tr:hover{background:
+  linear-gradient(rgba(233,233,237,.04),rgba(233,233,237,.04)) no-repeat 0 0/100% 100%,
+  linear-gradient(to right,transparent,var(--line) 48px,var(--line) calc(100% - 48px),transparent) no-repeat bottom/100% 1px}
+.field>label{display:block;font-size:12px;margin-bottom:5px;color:rgba(233,233,237,.7)}
+.input{width:100%;min-height:36px;padding:6px 10px;font:inherit;font-size:14px;color:var(--text);
+  caret-color:var(--accent);background:var(--surface);border:1px solid var(--divider);border-radius:var(--r-md)}
+.input:hover{border-color:rgba(233,233,237,.45)}
+.input:focus-visible{border-color:var(--accent);outline-offset:0}
+textarea.input{min-height:90px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.7}
+.seg{display:inline-flex;overflow:hidden;border:1px solid var(--divider);border-radius:var(--r-md)}
+.seg-opt{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;font-size:13px;cursor:pointer}
+.seg-opt+.seg-opt{border-left:1px solid var(--divider)}
+.seg-opt input{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+.seg-opt:has(input:checked){color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.seg-opt:not(:has(input:checked)):hover{background:rgba(233,233,237,.07)}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--t600)} .soft{color:var(--t400)}
+pre.log{background:var(--deep);border-radius:var(--r-md);box-shadow:var(--sh-sm);padding:13px 15px;
+  font:12px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;max-height:400px;overflow:auto;
+  white-space:pre-wrap;margin:0;color:var(--t400)}
+.spin{display:inline-block;width:11px;height:11px;border:2px solid var(--accent);border-right-color:transparent;
+  border-radius:50%;animation:sp .7s linear infinite;vertical-align:-1px;margin-right:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{position:fixed;right:20px;bottom:20px;background:var(--surface);box-shadow:var(--sh-md);
+  border-left:3px solid var(--accent);border-radius:var(--r-md);padding:11px 16px;z-index:90;
+  font-size:13px;max-width:400px;animation:sl .2s ease-out}
+@keyframes sl{from{transform:translateY(8px);opacity:0}}
+.toast.err{border-left-color:#d55}
+.modal{position:fixed;inset:0;background:rgba(41,43,49,.6);display:grid;place-items:center;z-index:60;padding:24px}
+.modal .box{background:var(--surface);border-radius:var(--r-lg);padding:22px 24px;max-width:620px;width:100%;
+  box-shadow:var(--sh-md);max-height:88vh;overflow:auto}
+.bar{height:7px;border-radius:4px;background:var(--deep);overflow:hidden}
+.bar>span{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#5d5294,#9184d9)}
+.uln{box-shadow:inset 0 -2px 0 var(--accent);padding-bottom:1px}
+.dot{width:7px;height:7px;border-radius:50%;flex:none;display:inline-block}
+.spec{display:grid;grid-template-columns:repeat(4,auto);gap:26px;justify-content:start}
+.spec .k{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--t600)}
+.spec .v{font-size:12.5px;margin-top:2px}
+
+#side{width:236px;flex:none;display:flex;flex-direction:column;gap:18px;padding:18px 12px 20px;
+  background:var(--side);box-shadow:inset -1px 0 0 rgba(233,233,237,.10);
+  position:sticky;top:0;height:100vh;overflow:auto}
+.navgrp{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--t600);padding:0 8px 4px}
+.navit{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;cursor:pointer;
+  font:inherit;font-size:13px;padding:7px 8px;border-radius:6px;background:transparent;color:var(--t400)}
+.navit:hover{background:rgba(233,233,237,.05)}
+.navit.on{background:var(--a900);color:var(--text)}
+.navit .mark{width:2px;height:14px;border-radius:2px;flex:none;background:transparent}
+.navit.on .mark{background:var(--accent)}
+.navit .bdg{margin-left:auto;font-size:10.5px;color:var(--t600)}
+
+/* KPI 栅格与工作台三栏用 class 而非内联样式，方便窄屏媒体查询覆盖 */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:20px}
+.wb3{display:grid;grid-template-columns:262px minmax(360px,1fr) 300px;gap:14px;align-items:start;overflow-x:auto}
+#burger{display:none;position:fixed;top:10px;left:10px;z-index:70}
+@media (max-width:1100px){
+  .wb3{grid-template-columns:1fr;overflow-x:visible}
+}
+@media (max-width:900px){
+  #burger{display:inline-flex}
+  #side{position:fixed;left:-260px;transition:left .2s;z-index:50}
+  #side.open{left:0}
+  #main{margin-left:0;padding-top:52px}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<button id="burger" class="btn btn-secondary" onclick="document.getElementById('side').classList.toggle('open')">☰</button>
+<div style="display:flex;align-items:stretch;min-height:100vh">
+  <aside id="side"></aside>
+  <main id="main" style="flex:1;min-width:0"><div id="view"></div></main>
+</div>
+<div id="modal"></div><div id="toast"></div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct=v=>v==null?'—':(v*100).toFixed(v>0&&v<0.095?1:0)+'%';
+const api=async(u,o)=>{try{const r=await fetch(u,o);if(!r.ok)return{error:`HTTP ${r.status}`};return await r.json().catch(()=>({error:'响应不是 JSON'}))}catch(e){return{error:'连接失败：服务未响应'}}};
+const mktLabel=m=>m==='cn'?'国内':m==='global'?'海外':'通用';
+const diagTag=d=>{if(!d)return'<span style="font-size:12px;color:var(--t600)">—</span>';
+  const cls=d.sev==='P0'?'tag-accent':d.sev==='P1'?'pill-warn':d.sev==='P2'?'tag-dim':'pill-good';
+  return `<span class="tag ${cls}" title="${esc(d.detail)}" style="cursor:help">${esc(d.type)}</span>`};
+function distRows(list,me){ // 品牌提及分布条：me=自己品牌名高亮
+  const max=((list||[])[0]||{}).rate||1;
+  return (list||[]).map(x=>{const mine=x.name===me;
+    return `<div class="row" style="gap:8px;padding:4px 0">
+      <span style="width:132px;flex:none;font-size:12.5px;${mine?'color:var(--a300)':''};overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(x.name)}">${esc(x.name)}${mine?' ⭑':''}</span>
+      <div class="bar" style="flex:1;height:6px"><div style="height:100%;width:${Math.max(3,Math.round(x.rate/max*100))}%;background:${mine?'var(--a400)':'#595d6c'};border-radius:4px"></div></div>
+      <span style="width:86px;flex:none;text-align:right;font-size:11.5px;color:var(--t400)">${pct(x.rate)} · ${x.hits} 次</span></div>`}).join('')
+    ||'<div class="muted" style="font-size:12px">本期没有实体被提及</div>';
+}
+function progBar(p,f,w){ // 任务级 before/after：首测(f) → 当前(p) → 目标
+  if(!p)return'';
+  const fmt=v=>v==null?'—':(p.pct?pct(v):v),op=p.op==='lte'?'≤':'≥';
+  let ratio; // 完成度：lte 型看从基线降到目标走了多远；gte 型看距目标比例
+  if(p.op==='lte'){const b=(f&&f.cur!=null?f.cur:null)??p.base??Math.max(p.cur,p.target,1);
+    ratio=b>p.target?(b-p.cur)/(b-p.target):(p.cur<=p.target?1:0)}
+  else ratio=p.target?p.cur/p.target:0;
+  ratio=Math.max(0,Math.min(1,ratio));
+  return `<div style="margin-top:5px;max-width:280px">
+    <div style="font-size:11px;color:var(--t500)">${esc(p.label)}：首测 ${fmt(f&&f.cur)} → 当前 <b style="color:var(--t300)">${fmt(p.cur)}</b> · 目标 ${op}${fmt(p.target)}</div>
+    <div class="bar" style="margin-top:3px;height:5px"><div style="height:100%;width:${Math.round(ratio*100)}%;background:${ratio>=1?'var(--a400)':'var(--accent)'};border-radius:4px"></div></div></div>`}
+const post=(u,b)=>api(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+let D=null,SLUG=null,R='overview',ACTIONS={},POLL=null,RUNNING=null,LASTJOB=null,LOGOFF=0;
+let ST={gapTab:'content',engSel:null,wq:null,obStep:1,obSlug:null,obNoSample:false,obFail:false,obUrl:'',obName:'',obMkt:'both'};
+
+function toast(m,k=''){const t=document.createElement('div');t.className='toast '+k;t.textContent=m;
+  $('#toast').appendChild(t);setTimeout(()=>t.remove(),3800)}
+function modal(h){$('#modal').innerHTML=`<div class="modal" onclick="if(event.target===this)closeModal()"><div class="box">${h}</div></div>`}
+function closeModal(){$('#modal').innerHTML=''}
+function go(r,extra,fromPop){R=r;Object.assign(ST,extra||{});
+  // 接入浏览器历史：每次页面跳转压一条记录，后退/前进在应用内导航而不是退出应用
+  if(!fromPop)history.pushState({r,engSel:ST.engSel,gapTab:ST.gapTab,wq:(extra||{}).wq||null},'','#'+r);
+  render();scrollTo(0,0);$('#side').classList.remove('open')}
+window.addEventListener('popstate',e=>{const s=e.state;if(!s||!s.r)return;
+  if(s.engSel!==undefined)ST.engSel=s.engSel;
+  if(s.gapTab)ST.gapTab=s.gapTab;
+  if(s.r==='workbench'&&s.wq)ST.wq=s.wq;
+  go(s.r,null,true)});
+function head(kicker,title,sub){return `<div class="kicker">${esc(kicker)}</div>
+  <h3 style="margin-bottom:6px">${title}</h3>
+  ${sub?`<p class="soft" style="font-size:14px;max-width:700px;text-wrap:pretty">${sub}</p>`:''}`}
+
+/* ===================== 导航 ===================== */
+const NAV=[
+ {t:'现状 · 我在 AI 里什么样',items:[['overview','总览'],['engines','引擎表现'],['competitors','竞品对比'],['questions','问题库']]},
+ {t:'诊断 · 为什么是这样',items:[['siteaudit','站点体检'],['gaps','差距诊断'],['channels','阵地地图'],['facts','品牌事实库']]},
+ {t:'提升 · 该做什么',items:[['plan','行动计划'],['workbench','内容工作台'],['assets','部署资产']]},
+ {t:'成效 · 做了有没有用',items:[['verify','效果验收'],['report','报告与交付']]},
+ {t:'账号',items:[['settings','设置']]},
+];
+function badge(k){
+  if(!D||!D.analytics)return'';
+  const a=D.analytics;
+  if(k==='questions')return String(D.question_count||'');
+  if(k==='siteaudit')return D.audit&&D.audit.avg_score!=null?String(D.audit.avg_score):'';
+  if(k==='assets'&&D.lint&&D.lint.total)return '!'+D.lint.total;
+  if(k==='engines')return String((a.engines||[]).length||'');
+  if(k==='plan'){const n=(D.tasks||[]).filter(t=>t.status!=='done').length;return n?String(n):''}
+  if(k==='gaps'){const q=(a.questions||[]).filter(x=>x.content!=='已成稿'&&!x.brand_probe).length;return q?String(q):''}
+  if(k==='verify'){const n=(a.q_delta||[]).filter(x=>(x.after||0)>(x.before||0)).length;return n?String(n):''}
+  return'';
+}
+function renderSide(){
+  const b=(D&&D.brand)||{};
+  $('#side').innerHTML=`
+  <div style="padding:0 8px">
+    <div style="font-weight:500;font-size:17px;letter-spacing:-.01em">Geo<span style="color:var(--accent)">Look</span></div>
+    <div style="font-size:11px;color:var(--t500);margin-top:2px">生成式引擎优化平台</div>
+  </div>
+  <button class="btn btn-secondary" style="justify-content:space-between;padding:8px 10px;text-align:left" onclick="switchModal()">
+    <span style="display:flex;flex-direction:column;gap:1px;align-items:flex-start">
+      <span style="font-size:9px;letter-spacing:.12em;color:var(--t500);text-transform:uppercase">当前品牌</span>
+      <span style="font-size:13px">${esc(b.name||'—')}</span></span>
+    <span style="color:var(--t500);font-size:11px">切换 ▾</span>
+  </button>
+  <nav style="display:flex;flex-direction:column;gap:16px">
+    ${NAV.map(g=>`<div style="display:flex;flex-direction:column;gap:2px">
+      <div class="navgrp">${esc(g.t)}</div>
+      ${g.items.map(([k,t])=>`<button class="navit ${R===k?'on':''}" onclick="go('${k}')">
+        <span class="mark"></span><span>${t}</span><span class="bdg">${badge(k)}</span></button>`).join('')}
+    </div>`).join('')}
+  </nav>
+  <div style="margin-top:auto;padding:10px;border-radius:var(--r-md);background:var(--surface);font-size:11px;color:var(--t500);line-height:1.55">
+    数据更新于 ${esc((D&&D.analytics&&D.analytics.latest_date)||'—')}<br>
+    采样为手动触发或由 schedule 驱动
+    <div style="margin-top:8px">${RUNNING
+      ?`<span class="spin"></span>任务运行中`
+      :`<button class="btn btn-ghost" style="font-size:12px;padding:2px 4px" onclick="runAction('serve')">▶ 跑完整一期</button>`}</div>
+  </div>`;
+}
+
+/* ===================== 任务运行 ===================== */
+async function runAction(a,params){
+  const r=await post('/api/run',{slug:SLUG,action:a,params:params||{}});
+  if(!r.ok){toast(r.error||'启动失败','err');return null}
+  RUNNING=r.job.id;LASTJOB=r.job.id;LOGOFF=0;renderSide();pollJob();
+  toast('已启动：'+((ACTIONS[a]||{}).label||a));return r.job;
+}
+async function pollJob(){
+  clearTimeout(POLL); if(!RUNNING)return;
+  const r=await api(`/api/job/${RUNNING}?offset=${LOGOFF}`);
+  if(r.error){RUNNING=null;renderSide();toast('任务状态丢失','err');return}
+  LOGOFF=r.offset;
+  const pre=$('#joblog'); if(pre&&r.log){pre.textContent+=r.log;pre.scrollTop=pre.scrollHeight}
+  const st=$('#jobstat'); if(st)st.innerHTML=r.job.status==='running'
+    ?`<span class="spin"></span>${esc(r.job.label)} 运行中…`
+    :`${r.job.status==='done'?'✓':'✗'} ${esc(r.job.label)} ${({done:'完成',failed:'失败',stopped:'已停止',interrupted:'已中断'})[r.job.status]||r.job.status}`;
+  if(r.job.status==='running'){POLL=setTimeout(pollJob,900)}
+  else{RUNNING=null;
+    toast(`${r.job.label} ${r.job.status==='done'?'完成':'结束'}`,r.job.status==='done'?'':'err');
+    if(R==='onboard'&&ST.obStep===2){
+      if(r.job.status==='done'){ST.obFail=false;ST.obStep=3;await load(SLUG,true);return}
+      ST.obFail=true;render();return}
+    await load(SLUG,true)}
+}
+
+/* ===================== 总览 ===================== */
+function headline(){
+  const a=D.analytics,h=a.health,tr=a.trend||[];
+  if(h.score==null)return['还没有采样数据','到「设置 → 运行任务」跑一期，才能开始诊断。'];
+  const prev=tr.length>1?tr[tr.length-2]:null;
+  const dm=prev&&prev.mention!=null&&tr[tr.length-1].mention!=null?((tr[tr.length-1].mention-prev.mention)*100).toFixed(1):null;
+  const cite=h.subs.cite,m=h.subs.mention;
+  if((m||0)===0)return['AI 还没有主动提到过你',
+    `最近一期 ${tr.length?tr[tr.length-1].samples:0} 条采样中无提示提及率为 0——不是排名靠后，是还没进入候选集。先补内容缺口和 P0 阵地，不是继续铺渠道。`];
+  if((cite||0)<0.05)return['AI 开始提到你了，但几乎不引用你',
+    `提及率 ${pct(m)}${dm?`（较上期 ${dm>0?'+':''}${dm}pp）`:''}，但引用份额只有 ${pct(cite)}——「有人在说你」而「你没有可引用的落点」。优先补可被抽取的内容。`];
+  return['提及与引用同步在涨',`提及率 ${pct(m)}、引用份额 ${pct(cite)}。保持内容节奏，开始扩阵地。`];
+}
+function vOverview(){
+  const a=D.analytics,h=a.health,tr=a.trend||[];
+  const [ht,hs]=headline();
+  const S=h.subs;
+  const kpis=[
+    ['GEO 健康分',h.score==null?'—':h.score,`${h.measured.length}/5 项可测${S.fact==null?' · 事实一致性未测':''}`],
+    ['提及率',pct(S.mention),'无提示样本中被主动提到'],
+    ['引用份额',pct(S.cite),'来源域名里属于你的比例'],
+    ['阵地覆盖',S.channel==null?'—':pct(S.channel),'已被 AI 引用的阵地占比'],
+    ['内容承接',S.content==null?'—':pct(S.content),'目标问题已有成稿内容'],
+  ];
+  const open=(D.tasks||[]).filter(t=>t.status!=='done').sort((x,y)=>x.priority.localeCompare(y.priority)).slice(0,3);
+  const engs=a.engines||[];
+  const maxm=Math.max(.001,...engs.map(e=>e.mention||0));
+  const comp=a.competitors||{},topRival=(comp.table||[])[0];
+  const svg=(()=>{
+    if(tr.length<2)return `<div class="muted" style="font-size:12.5px;padding:20px 0">已有 ${tr.length} 期数据，至少两期才能画趋势。</div>`;
+    const W=620,H=170,P={l:8,r:8,t:12,b:10};
+    const xs=i=>P.l+(W-P.l-P.r)*(i/(tr.length-1));
+    const ys=v=>H-P.b-(H-P.t-P.b)*((v||0)/100);
+    const pts=tr.map((p,i)=>[xs(i),ys(p.health)]);
+    const path=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:170px" preserveAspectRatio="none">
+      ${[0,.33,.66,1].map(f=>`<line x1="0" y1="${(P.t+(H-P.t-P.b)*f).toFixed(0)}" x2="${W}" y2="${(P.t+(H-P.t-P.b)*f).toFixed(0)}" stroke="#3f424d" stroke-width="1" ${f>0&&f<1?'stroke-dasharray="3 4"':''}></line>`).join('')}
+      <path d="${path} L${pts[pts.length-1][0]},${H} L${pts[0][0]},${H} Z" fill="#9184d9" opacity="0.10"></path>
+      <path d="${path}" fill="none" stroke="#9184d9" stroke-width="2.5" stroke-linejoin="round"></path>
+      <circle cx="${pts[pts.length-1][0]}" cy="${pts[pts.length-1][1]}" r="4" fill="#9184d9"></circle>
+    </svg>
+    <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--t600)">
+      ${tr.map(p=>`<span>${p.date.slice(5)}</span>`).join('')}</div>`;
+  })();
+  return `<div style="padding:32px 44px 72px;max-width:1280px">
+    <div class="kicker">现状 · 总览</div>
+    <h3>${esc(ht)}</h3>
+    <p class="soft" style="font-size:14px;max-width:660px">${esc(hs)}</p>
+
+    <div class="kpis">
+      ${kpis.map(([l,v,n])=>`<div class="card elev" style="gap:4px;padding:15px">
+        <div style="font-size:11.5px;color:var(--t500)">${l}</div>
+        <div style="font-size:29px;font-weight:500;letter-spacing:-.02em">${v}</div>
+        <div style="font-size:11px;color:var(--t600);line-height:1.4">${n}</div></div>`).join('')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.35fr 1fr;gap:14px;margin-top:14px">
+      <div class="card elev" style="padding:18px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <div><div style="font-size:15px;font-weight:500">GEO 健康分趋势</div>
+            <div style="font-size:11.5px;color:var(--t600)">加权：提及率30 引用25 阵地20 内容15 事实10；未测项权重重新归一。</div></div>
+          ${h.score!=null?`<span class="tag tag-accent">${h.score}</span>`:''}
+        </div>
+        <div style="margin-top:10px">${svg}</div>
+      </div>
+      <div class="card elev" style="padding:18px;gap:10px">
+        <div><div style="font-size:15px;font-weight:500">下一步做这 ${open.length} 件事</div>
+          <div style="font-size:11.5px;color:var(--t600)">按优先级取自行动计划。</div></div>
+        ${open.map(t=>`<div style="padding:12px;border-radius:var(--r-md);background:var(--deep);box-shadow:var(--sh-sm);display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;justify-content:space-between;gap:8px">
+            <span style="font-size:13.5px">${esc(t.title)}</span>
+            <span class="tag ${t.priority==='P0'?'tag-accent':'tag-dim'}" style="flex:none">${t.priority}</span></div>
+          <div style="font-size:11.5px;color:var(--t500);line-height:1.45">${esc(t.why)}</div>
+          <div style="font-size:11px;color:var(--t600)">${esc(t.owner)} · ${esc(t.effort)} · 验收：${esc((t.acceptance||{}).desc||'')}</div>
+        </div>`).join('')||'<div class="muted">暂无任务，先到「设置」跑一期。</div>'}
+        <button class="btn btn-primary btn-block" onclick="go('plan')">打开行动计划（${(D.tasks||[]).length} 项）</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+      <div class="card elev" style="padding:18px">
+        <div style="font-size:15px;font-weight:500">各引擎表现</div>
+        <div style="font-size:11.5px;color:var(--t600);margin-bottom:8px">同一批问题在不同引擎上的差异，几乎完全由信源结构决定。</div>
+        ${engs.map(e=>`<div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+          <span style="width:96px;font-size:12.5px;flex:none">${esc(e.label)}</span>
+          <span class="bar" style="flex:1"><span style="width:${((e.mention||0)/maxm*100).toFixed(0)}%"></span></span>
+          <span style="width:48px;text-align:right;font-size:12px;color:var(--t400);flex:none">${pct(e.mention)}</span>
+        </div>`).join('')||'<div class="muted">尚未采样</div>'}
+        <button class="btn btn-ghost" style="align-self:flex-start;margin-top:6px" onclick="go('engines')">逐个引擎下钻 →</button>
+      </div>
+      <div class="card elev" style="padding:18px">
+        <div style="font-size:15px;font-weight:500">你和对手的差距在哪一层</div>
+        <div style="font-size:11.5px;color:var(--t600);margin-bottom:8px">对手数据来自同一批采样中的竞品出现率；标 — 的层无法对对手测量。</div>
+        ${[['曝光层 · 提及率',S.mention,topRival?topRival.presence:null,topRival?topRival.name:'—'],
+           ['引用层 · 引用份额',S.cite,null,'不可测'],
+           ['承接层 · 内容承接',S.content,null,'不可测']].map(([n,me,them,who])=>{
+          const mx=Math.max(.001,me||0,them||0);
+          return `<div style="padding:11px 0;box-shadow:inset 0 -1px 0 var(--line)">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+            <span>${n}</span><span style="font-size:12px;color:var(--a400)">${them!=null&&me!=null&&me>0?('差 '+(them/me).toFixed(1)+' 倍'):''}</span></div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--t600)">
+            <span style="width:48px">你</span><span class="bar" style="flex:1"><span style="width:${((me||0)/mx*100).toFixed(0)}%"></span></span>
+            <span style="width:44px;text-align:right">${pct(me)}</span></div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--t600);margin-top:4px">
+            <span style="width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(who)}</span>
+            <span class="bar" style="flex:1"><span style="width:${them!=null?((them/mx)*100).toFixed(0):0}%;background:#595d6c"></span></span>
+            <span style="width:44px;text-align:right">${them!=null?pct(them):'—'}</span></div>
+        </div>`}).join('')}
+        <button class="btn btn-ghost" style="align-self:flex-start;margin-top:6px" onclick="go('gaps')">看差距诊断 →</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ===================== 引擎表现 ===================== */
+async function vEngines(){
+  if(!KEYS)KEYS=await api('/api/keys');
+  if(!Array.isArray(KEYS))KEYS=[];
+  const a=D.analytics,engs=a.engines||[];
+  const manual=(KEYS||[]).filter(k=>k.ok!==true&&!engs.some(e=>e.platform===k.code));
+  const sel=ST.engSel||((engs[0]||{}).platform);
+  const e=engs.find(x=>x.platform===sel);
+  const ex=e&&e.example;
+  const brand=D.brand.name||'';
+  const excerpt=ex?(ex.brand_pos>=0
+    ?esc(ex.excerpt.slice(0,ex.brand_pos))+`<span class="uln">${esc(brand)}</span>`+esc(ex.excerpt.slice(ex.brand_pos+brand.length))
+    :esc(ex.excerpt)):'';
+  const own=(D.brand.site||'').replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,'');
+  return `<div style="padding:32px 44px 72px;max-width:1280px">
+    ${head('现状 · 引擎表现','引擎之间的差距，是各自偏好信源的差距','看每个引擎在引用谁——那就是你要去建设的阵地清单。API 采样与网页端结果口径不同，行内已标注是否联网。<span style="color:var(--a300);cursor:pointer" onclick="showMethod()">这些数字怎么算的 →</span>')}
+    <div class="tbl"><table class="table" style="margin-top:22px"><thead><tr>
+      <th style="width:140px">引擎</th><th style="width:70px">样本</th><th style="width:90px">提及率</th>
+      <th style="width:90px">提及位次</th><th style="width:120px">引用份额</th>
+      <th style="width:220px">它实际在引用</th><th>结论</th></tr></thead><tbody>
+      ${engs.map(x=>`<tr style="cursor:pointer" onclick="ST.engSel=${esc(JSON.stringify(x.platform))};render()">
+        <td><span style="font-size:14px;${x.platform===sel?'color:var(--a300)':''}">${esc(x.label)}</span>
+          <div style="font-size:10.5px;color:var(--t600)">${mktLabel(x.market)} · ${x.searched?'联网':'参数化知识'}${x.avg_ms?` · 中位 ${(x.avg_ms/1000).toFixed(1)}s/题`:''}</div></td>
+        <td style="font-size:13px;color:var(--t400)">${x.samples}</td>
+        <td><span class="tag ${(x.mention||0)>0?'pill-good':'pill-warn'}">${pct(x.mention)}</span></td>
+        <td style="font-size:13px;color:var(--t400)">${x.pos_median==null?'—':x.pos_median}</td>
+        <td style="font-size:13px;color:var(--t400)">${pct(x.cite_share)}<span class="muted" style="font-size:10.5px"> ${x.cite_counts[0]}/${x.cite_counts[1]}</span></td>
+        <td style="font-size:12.5px;color:var(--t500)">${esc((x.top_sources||[]).join(' / ')||'—')}</td>
+        <td style="font-size:12.5px;color:var(--t400)">${x.neg_n?`<span class="tag tag-accent" title="有样本在品牌附近命中负面线索词，到样本回放人工复核" style="cursor:help">疑似负面 ${x.neg_n}</span> `:''}${esc(x.verdict)}</td></tr>`).join('')}
+      ${manual.map(k=>`<tr style="opacity:.65">
+        <td><span style="font-size:14px">${esc(k.label)}</span>
+          <div style="font-size:10.5px;color:var(--t600)">${mktLabel(k.market)} · ${k.ok===false?'缺 API Key':'仅人工采样'}</div></td>
+        <td style="font-size:13px;color:var(--t600)">0</td>
+        <td><span class="tag tag-dim">未采样</span></td>
+        <td style="color:var(--t600)">—</td><td style="color:var(--t600)">—</td>
+        <td style="font-size:12.5px;color:var(--t600)">${k.ok===false?('配置 '+esc(k.env)+' 后自动采样'):'导出人工采样表逐题填写'}</td>
+        <td><button class="btn btn-ghost" style="font-size:12px" onclick="${k.ok===false?`go('settings')`:`go('report')`}">${k.ok===false?'去配置':'采样表'}</button></td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="muted" style="font-size:12px;margin-top:8px">灰色行是尚未覆盖的引擎——它们才是真实用户量最大的入口（网页端/App），指标缺口以此为准。</p>
+
+    ${e?`<div style="display:grid;grid-template-columns:1.1fr .95fr .95fr;gap:14px;margin-top:26px">
+      <div class="card elev" style="padding:18px">
+        <div style="font-size:15px;font-weight:500">样本回放 · ${esc(e.label)}</div>
+        <div style="font-size:11.5px;color:var(--t600);margin-bottom:8px">${ex?`问题：「${esc(ex.question)}」 · ${esc(ex.date)} · 真实采样原文`:'本期无样本'}</div>
+        ${ex?`<div style="padding:13px;border-radius:var(--r-md);background:var(--deep);font-size:13px;line-height:1.65;color:#cfd3e5">${excerpt}…</div>
+        <div class="row" style="margin-top:10px;font-size:11.5px">
+          <span class="tag tag-neutral">${ex.mentioned?`已提及 · 位次 ${ex.rank||'—'}`:'未提及'}</span>
+          <span class="tag tag-neutral">引用来源 ${ex.n_cites} 个${ex.own_cited?'，含你的域名':'，无一来自你'}</span>
+          ${(ex.negative_cues||[]).length?`<span class="tag tag-accent" title="命中词：${esc(ex.negative_cues.join('、'))}" style="cursor:help">疑似负面 · 人工复核</span>`:''}
+          <span class="tag tag-outline" style="cursor:pointer" onclick="event.stopPropagation();go('gaps',{gapTab:'fact'})">发现说错了？记一条事实偏差</span>
+        </div>`:''}
+      </div>
+      <div class="card elev" style="padding:18px">
+        <div style="font-size:15px;font-weight:500">这个引擎提到谁</div>
+        <div style="font-size:11.5px;color:var(--t600);margin-bottom:6px">无提示样本里各品牌被提及的比例（⭑ 是你）。</div>
+        ${distRows(e.brand_dist,D.brand.name)}
+        <button class="btn btn-ghost" style="align-self:flex-start;margin-top:8px" onclick="go('competitors')">到竞品对比看全市场 →</button>
+      </div>
+      <div class="card elev" style="padding:18px">
+        <div style="font-size:15px;font-weight:500">这个引擎最常引用谁</div>
+        <div style="font-size:11.5px;color:var(--t600);margin-bottom:8px">每一条都是一次「本该是你」的机会。</div>
+        ${(e.top_sources||[]).map(d=>{const mine=d===own||d.endsWith('.'+own);
+          return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;box-shadow:inset 0 -1px 0 var(--line)">
+          <span class="dot" style="background:${mine?'var(--a400)':'#595d6c'}"></span>
+          <span style="flex:1;font-size:13px">${esc(d)}${mine?' <span class="tag pill-good" style="font-size:10px">你</span>':''}</span></div>`}).join('')
+          ||'<div class="muted" style="font-size:12.5px">本期该引擎没有返回引用来源（可能未联网）</div>'}
+        <button class="btn btn-ghost" style="align-self:flex-start;margin-top:8px" onclick="go('channels')">到阵地地图看全部 →</button>
+      </div>
+    </div>`:''}
+
+    ${(a.brand_dist&&((a.brand_dist.cn||[]).length||(a.brand_dist.global||[]).length))?`
+    <h4 style="font-size:16px;margin:28px 0 6px">全部引擎 · 品牌提及分布</h4>
+    <p class="muted" style="font-size:12px;margin-bottom:10px">同一批无提示样本里，各品牌被提及的样本占比（含别名合并）。口径：只统计你与已配置竞品——没配置的品牌不会出现在这里，竞品清单越全分布越真实，缺了就到「设置 → 编辑当前品牌配置」补。</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      ${[['cn','国内市场'],['global','海外市场']].map(([m,l])=>{
+        const list=a.brand_dist[m]||[];if(!list.length)return'';
+        const ns=((a.competitors||{}).sample_ns||{})[m]||0;
+        return `<div class="card elev" style="padding:18px">
+          <div style="font-size:13.5px;font-weight:500;margin-bottom:6px">${l}<span class="muted" style="font-size:11px;font-weight:400"> · 分母 ${ns} 条无提示样本</span></div>
+          ${distRows(list,D.brand.name)}</div>`}).join('')}
+    </div>`:''}
+  </div>`;
+}
+
+/* ===================== 竞品对比 ===================== */
+function vCompetitors(){
+  const c=D.analytics.competitors||{},h=D.analytics.health;
+  const T=c.tables||(c.table?{cn:c.table,global:[]}:{cn:[],global:[]});
+  const NS=c.sample_ns||{cn:c.sample_n||0,global:0};
+  const flat=(T.cn||[]).concat(T.global||[]);
+  const topName=flat.length?flat[0].name:'竞品';
+  const engTags=x=>((x.top_engines||[]).map(t=>
+      `<span class="tag tag-outline" style="cursor:pointer;font-size:11px" title="点击到「引擎表现」查看该引擎"
+        onclick="ST.engSel=${esc(JSON.stringify(t.platform))};go('engines')">${esc(t.label)} ${pct(t.rate)}</span>`).join(' ')
+      ||'<span class="muted" style="font-size:11.5px">—</span>');
+  const meRow=`<tr style="background:linear-gradient(90deg,rgba(145,132,217,.10),transparent)">
+        <td><span style="font-size:14px">${esc(D.brand.name)}</span><div style="font-size:10.5px;color:var(--t600)">你</div></td>
+        <td><span class="tag pill-good">${pct(h.subs.mention)}</span></td>
+        <td style="font-size:13px;color:var(--t400)">提及率口径</td>
+        <td><button class="btn btn-ghost" style="font-size:11.5px;padding:2px 8px" onclick="go('engines')">逐引擎明细 →</button></td>
+        <td style="font-size:12.5px;color:var(--t500)">健康分 ${h.score==null?'—':h.score} · 引用份额 ${pct(h.subs.cite)} · 你的提及率是全市场口径</td></tr>`;
+  const tbl=(rows,n,label)=>rows.length?`
+    <h4 style="font-size:15px;margin:26px 0 4px">${label}<span style="font-size:11.5px;color:var(--t600);font-weight:400"> · 分母为本市场 ${n} 条无提示样本</span></h4>
+    <div class="tbl"><table class="table"><thead><tr>
+      <th style="width:180px">品牌</th><th style="width:100px">出现率</th><th style="width:90px">命中样本</th><th style="width:250px">最强引擎（点击联动）</th><th>说明</th></tr></thead><tbody>
+      ${meRow}
+      ${rows.map(x=>`<tr>
+        <td style="font-size:14px">${esc(x.name)}</td>
+        <td><span class="tag ${(x.presence||0)>((h.subs.mention)||0)?'tag-accent':'tag-dim'}">${pct(x.presence)}</span></td>
+        <td style="font-size:13px;color:var(--t400)">${x.hits}</td>
+        <td>${engTags(x)}</td>
+        <td style="font-size:12.5px;color:var(--t500)">${(x.presence||0)>((h.subs.mention)||0)?'在你前面——看它被谁引用':'落后于你'}</td></tr>`).join('')}
+    </tbody></table></div>`:'';
+  return `<div style="padding:32px 44px 72px;max-width:1280px">
+    ${head('现状 · 竞品对比',`${esc(topName)}赢在信源占位，不在产品`,
+      `同一批无提示采样下的对手出现率，国内（${NS.cn||0} 条）与海外（${NS.global||0} 条）分开算、分母各用各的。对手领先是可复制的——补上它们被引用的那类内容，你就能进同一批回答。竞品的引用份额与内容承接无法从外部测量，故不列。`)}
+    ${tbl(T.cn||[],NS.cn||0,'国内市场')}
+    ${tbl(T.global||[],NS.global||0,'海外市场')}
+    ${!flat.length?'<div class="muted" style="margin-top:22px">暂无竞品数据——先到「设置」配置竞品并跑完整一期。</div>':''}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:26px">
+      <div class="card elev" style="padding:18px">
+        <div style="font-size:15px;font-weight:500">被抢走的问题</div>
+        <div style="font-size:11.5px;color:var(--t600);margin-bottom:6px">你 0% 出现、对手稳定出现——优先级最高的选题池。</div>
+        ${(c.lost||[]).map(q=>`<div style="padding:10px 0;box-shadow:inset 0 -1px 0 var(--line)">
+          <div style="font-size:13px;margin-bottom:3px">${esc(q.question)}</div>
+          <div style="font-size:11px;color:var(--t600)">${mktLabel(q.market)} · 你 ${pct(q.mine)} / ${esc(q.rival)} ${pct(q.rival_rate)} · ${q.samples} 样本
+            <button class="btn btn-ghost" style="font-size:11px;padding:0 4px" onclick="go('workbench',{wq:${esc(JSON.stringify(q.qid))}})">写内容 →</button></div>
+        </div>`).join('')||'<div class="muted" style="font-size:12.5px">本期没有失守问题</div>'}
+      </div>
+      <div class="card elev" style="padding:18px">
+        <div style="font-size:15px;font-weight:500">你独占的问题</div>
+        <div style="font-size:11.5px;color:var(--t600);margin-bottom:6px">你出现而对手全部缺席——守住，并把这类内容复制到别的题上。</div>
+        ${(c.won||[]).map(q=>`<div style="padding:10px 0;box-shadow:inset 0 -1px 0 var(--line)">
+          <div style="font-size:13px;margin-bottom:3px">${esc(q.question)}</div>
+          <div style="font-size:11px;color:var(--t600)">你 ${pct(q.mine)} · ${q.samples} 样本 · 对手 0 出现</div>
+        </div>`).join('')||'<div class="muted" style="font-size:12.5px">本期没有独占问题——先把「被抢走的问题」补上</div>'}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ===================== 问题库 ===================== */
+function vQuestions(){
+  const qs=D.analytics.questions||[];
+  const g=x=>qs.filter(q=>q.group===x).length;
+  let probeSep=false;
+  const rowsHtml=qs.map(q=>{
+    const sep=q.brand_probe&&!probeSep?(probeSep=true,
+      `<tr><td colspan="7" style="padding:16px 12px 6px;font-size:12px;color:var(--t500)">品牌认知 · 点名探测题（展示品牌被复述率，不计入提及率，也不参与上方选题排序）</td></tr>`):'';
+    return sep+`<tr>
+        <td style="font-size:13.5px">${esc(q.text)}${q.brand_probe?' <span class="tag tag-dim" style="font-size:10px">点名</span>':''}</td>
+        <td><span class="tag tag-neutral">${esc(q.group)}</span></td>
+        <td style="font-size:12.5px;color:var(--t500)">${mktLabel(q.market)}</td>
+        <td><span class="tag ${(q.mention||0)>0?'pill-good':'pill-warn'}">${q.mention==null?'未采样':pct(q.mention)}</span></td>
+        <td>${q.brand_probe?'<span style="font-size:12px;color:var(--t600)">—</span>':diagTag(q.diagnosis)}</td>
+        <td style="font-size:12.5px;color:${q.content==='已成稿'?'var(--a300)':'var(--t500)'}">${esc(q.content)}</td>
+        <td><button class="btn btn-ghost" style="font-size:12px" onclick="go('workbench',{wq:${esc(JSON.stringify(q.id))}})">写内容</button></td></tr>`;
+  }).join('');
+  return `<div style="padding:32px 44px 72px;max-width:1280px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+      <div>${head('现状 · 问题库',`${qs.length} 个问题，是全站所有数字的来源`,
+        '「问题」= 真实用户会向 AI 提的一句问题。改这里会改变所有页面的数字。带「点名」标记的属于品牌认知探测，不计入提及率。<span style="color:var(--a300);cursor:pointer" onclick="showMethod()">问题是怎么批量生成的 →</span>')}</div>
+      <div class="row" style="flex:none">
+        <button class="btn btn-ghost" onclick="showMethod()">生成规则</button>
+        <button class="btn btn-secondary" onclick="editQuestions()">编辑问题库</button>
+        <button class="btn btn-primary" onclick="runAction('bootstrap')">AI 补充选题</button>
+      </div>
+    </div>
+    <div class="row" style="margin:18px 0 12px;font-size:12px;color:var(--t500)">
+      ${['推荐','比较','替代','价格','风险','品牌验证','场景'].map(x=>`<span class="tag tag-dim">${x} ${g(x)}</span>`).join('')}
+      <span style="margin-left:auto">按「未提及 + 无内容」排序 —— 顶部就是选题池</span>
+    </div>
+    <div class="tbl"><table class="table"><thead><tr>
+      <th>问题</th><th style="width:70px">类别</th><th style="width:70px">市场</th>
+      <th style="width:96px">你的提及</th><th style="width:96px">诊断</th><th style="width:100px">已有内容</th><th style="width:90px"></th></tr></thead><tbody>
+      ${rowsHtml}
+    </tbody></table></div>
+  </div>`;
+}
+function showMethod(){
+  const li=(t)=>`<li style="margin:5px 0;line-height:1.6">${t}</li>`;
+  const h=(t)=>`<div style="font-size:14px;font-weight:500;margin:18px 0 4px;color:var(--a300)">${t}</div>`;
+  modal(`<h4 style="font-size:17px">这些数字怎么来的——生成规则与指标口径</h4>
+    <p class="muted" style="font-size:12.5px;margin-top:4px">全站指标都来自「问题库 × 引擎」的批量采样。规则是固定的、可复现的，下面是完整口径。</p>
+
+    ${h('一、问题库怎么批量生成（接入品牌 / AI 补充选题）')}
+    <ul style="font-size:12.5px;color:var(--t400);padding-left:18px">
+      ${li('输入只有四样：<b>品牌名、品类、目标用户、一句话定义</b>——全部从官网正文自动抽取，抽不到的标「待确认」，不用常识填充。')}
+      ${li('由你配置的 LLM 按固定提示词出题，分七组：<b>推荐、比较、替代、价格、风险、品牌验证、场景</b>，每组 2–4 题。')}
+      ${li('题量按市场定：国内 18–24 题；海外 14–20 题；双市场 = 国内 16–20 + 海外 12–16 + 通用 2。编号 q001 起为国内、q101 起为海外、q901 起为通用。')}
+      ${li('要求真实口语问法：国内题像真人在 AI 里打的字；海外题是<b>英文原生问法</b>，不是中文题翻译。')}
+      ${li('<b>关键纪律：绝大多数问题不出现品牌名</b>——考的是 AI 会不会主动想到你。只有「品牌验证」组点名，这类题带「点名」标记，单独归品牌认知，不计入提及率。')}
+      ${li('生成后自动去重、校验分组与市场标记；问题库随时可人工编辑，改完重跑采样才生效。')}
+    </ul>
+
+    ${h('二、采样怎么跑')}
+    <ul style="font-size:12.5px;color:var(--t400);padding-left:18px">
+      ${li('每期把问题库里的每道题逐个引擎各问一遍，存<b>原始回答全文</b>——引擎表现页的「样本回放」就是原文。')}
+      ${li('市场路由：中文题只问国内引擎，英文题只问海外引擎，通用题两边都问；两套市场的指标分开算，分母各用各的。')}
+      ${li('引擎分三类：联网 API（回答带真实引用来源）、不联网 API（测的是模型参数化知识里的品牌认知）、无公开 API（走人工采样表）。行内已标注。')}
+      ${li('每条样本同时记录 API 耗时；引擎表现页显示中位耗时（抗超时长尾），让采样成本透明。')}
+    </ul>
+
+    ${h('三、指标口径（引擎表现页每一列）')}
+    <ul style="font-size:12.5px;color:var(--t400);padding-left:18px">
+      ${li('<b>提及率</b> = 无提示样本中，回答提到品牌（含别名）的比例。问题里点名了品牌的样本一律剔除——否则必然 100%，是假阳性。别名漏配会低估，到「设置 → 编辑当前品牌配置」补。')}
+      ${li('<b>提及位次</b> = 回答里品牌相对其他候选品牌出现顺序的中位数，越小越靠前。')}
+      ${li('<b>引用份额</b> = 回答引用的全部域名条数中，属于你自有域名（含子域名）的比例。不联网引擎通常没有引用，显示 —。')}
+      ${li('<b>结论</b>列的判语规则：0% → 完全不可见；严格高于同市场所有引擎 → 表现最好；≥5% → 有存在感但不稳定；&lt;5% → 偶发提及；从未引用你的域名会单独标注。样本不足或无法比较时不下结论。')}
+      ${li('<b>GEO 健康分</b> = 提及率×30 + 引用份额×25 + 阵地覆盖×20 + 内容承接×15 + 事实一致性×10。没测到的项不按 0 分计，而是把权重重新归一，避免惩罚「还没测」。')}
+      ${li('<b>诊断</b>列（问题库/差距诊断）按固定优先级分型：<b>疑似负面</b>（品牌附近命中负面线索词，需人工复核）&gt; <b>竞品主导</b>（你 0% 且某对手出现率 ≥50%）&gt; <b>完全缺席</b>（0%）&gt; <b>排名靠后</b>（位次中位 &gt;3）&gt; 表现正常。悬停标签可看依据。')}
+      ${li('<b>疑似负面</b>只是线索词（避雷/不推荐/投诉/scam 等）在品牌名 ±百余字符窗口内命中，不做自动定性——定性靠样本回放人工复核，误报比漏报便宜。')}
+      ${li('<b>品牌提及分布 / 竞品最强引擎</b>：统计回答中出现的你与已配置竞品（别名并入），分母为对应范围的无提示样本数，同一样本提多次只算一次。<b>未配置的品牌不计入</b>——竞品清单和别名越全，分布越真实。')}
+    </ul>
+
+    <p class="muted" style="font-size:11.5px;margin-top:10px">规则实现在 scripts/bootstrap.py（出题）、sample.py（采样与判定）、analytics.py（指标），本弹窗与代码同步维护。</p>
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-primary" onclick="closeModal()">知道了</button></div>`);
+}
+async function editQuestions(){
+  const cfg=await api('/api/config/'+SLUG);
+  const rows=(cfg.questions||[]).map(q=>`${q.id}|${q.group}|${q.market}|${q.text}`).join('\n');
+  modal(`<h4 style="font-size:17px">编辑问题库</h4>
+    <p class="muted" style="font-size:12px">每行一题：<code>编号|分组|市场(cn/global/both)|问题</code>。保存后重跑采样才生效。</p>
+    <textarea id="qedit" class="input" rows="18">${esc(rows)}</textarea>
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveQuestions()">保存</button></div>`);
+}
+async function saveQuestions(){
+  const cfg=await api('/api/config/'+SLUG);
+  const qs=[];
+  for(const line of $('#qedit').value.split('\n')){
+    const m=line.split('|');if(m.length<4||!m[3].trim())continue;
+    qs.push({id:m[0].trim(),group:m[1].trim()||'推荐',market:['cn','global','both'].indexOf(m[2].trim())>=0?m[2].trim():'cn',text:m.slice(3).join('|').trim()});
+  }
+  cfg.questions=qs; if(cfg.bootstrap)cfg.bootstrap.needs_review=false;
+  const r=await post('/api/config/'+SLUG,cfg);
+  toast(r.ok?`已保存 ${qs.length} 题`:'保存失败',r.ok?'':'err');
+  if(r.ok){closeModal();load(SLUG,true)}
+}
+
+/* ===================== 差距诊断 ===================== */
+function vGaps(){
+  const a=D.analytics,qs=(a.questions||[]).filter(q=>!q.brand_probe);
+  const contentGap=qs.filter(q=>q.content!=='已成稿');
+  const bp=D.blueprint||{channels:[]};
+  const chanGap=(bp.channels||[]).filter(c=>!c.covered&&(c.priority==='P0'||c.priority==='P1'));
+  const fc=a.factcheck||[];
+  const gt=ST.gapTab;
+  const cards=[
+    {k:'content',order:'第一步 · 先修',name:'内容缺口',v:contentGap.length,unit:'个问题没有可被抽取的答案',
+     sev:'影响最大',why:'没有内容，铺阵地和改口径都没有落点。实测：含数字 +61.6%、定义 +57.3%、对比 +55.3% 被引用概率。'},
+    {k:'channel',order:'第二步 · 再铺',name:'阵地缺口',v:chanGap.length,unit:'个 P0/P1 阵地未被引用',
+     sev:'见效最快',why:'引擎实际会引用、你却没有内容的站点。P0 是地基。'},
+    {k:'fact',order:'第三步 · 校准',name:'事实偏差',v:fc.filter(f=>f.state!=='一致').length,unit:'处口径待修或未比对',
+     sev:'越曝光越亏',why:'提及率上升会放大错误说法。从「引擎表现」的样本回放里人工比对后记录在这里。'},
+  ];
+  const tab=(k,label)=>`<button class="btn" style="font-size:13px;${gt===k?'background:var(--a900);color:var(--a300);box-shadow:inset 0 0 0 1px var(--a700)':'color:var(--t500)'}" onclick="ST.gapTab='${k}';render()">${label}</button>`;
+  let body='';
+  if(gt==='content'){
+    body=`<div class="tbl"><table class="table"><thead><tr><th>缺口问题</th><th style="width:70px">市场</th><th style="width:96px">你的提及</th><th style="width:96px">诊断</th><th style="width:100px">当前状态</th><th style="width:100px"></th></tr></thead><tbody>
+      ${contentGap.map(q=>`<tr><td style="font-size:13.5px">${esc(q.text)}</td>
+        <td style="font-size:12.5px;color:var(--t500)">${mktLabel(q.market)}</td>
+        <td style="font-size:13px;color:var(--t400)">${q.mention==null?'未采样':pct(q.mention)}</td>
+        <td>${diagTag(q.diagnosis)}</td>
+        <td style="font-size:12.5px;color:var(--t500)">${esc(q.content)}</td>
+        <td><button class="btn btn-ghost" style="font-size:12px" onclick="go('workbench',{wq:${esc(JSON.stringify(q.id))}})">生成草稿</button></td></tr>`).join('')||'<tr><td colspan="6" class="muted">没有内容缺口</td></tr>'}
+    </tbody></table></div>`;
+  }else if(gt==='channel'){
+    body=`<div class="tbl"><table class="table"><thead><tr><th>阵地</th><th style="width:70px">优先级</th><th style="width:110px">全国引用量</th><th style="width:100px">引用位置</th><th style="width:220px">建什么</th><th style="width:100px"></th></tr></thead><tbody>
+      ${chanGap.map(c=>`<tr><td style="font-size:13.5px">${esc(c.name)}</td>
+        <td><span class="tag ${c.priority==='P0'?'tag-accent':'tag-dim'}">${c.priority}</span></td>
+        <td style="font-size:13px;color:var(--t400)">${c.national?c.national.toLocaleString():'—'}</td>
+        <td style="font-size:13px;color:var(--t400)">${c.position==null?'—':c.position}</td>
+        <td style="font-size:12.5px;color:var(--t500)">${esc((c.forms||[]).slice(0,2).join(' / '))}</td>
+        <td><button class="btn btn-ghost" style="font-size:12px" onclick="go('channels',{chanSel:${esc(JSON.stringify(c.name))}})">建设方案</button></td></tr>`).join('')||'<tr><td colspan="6" class="muted">P0/P1 阵地已全部覆盖</td></tr>'}
+    </tbody></table></div>`;
+  }else{
+    body=`<div class="row" style="margin-bottom:10px">
+      <span class="muted" style="font-size:12.5px">从「引擎表现 → 样本回放」发现 AI 说错的地方，记在这里。有记录后「事实一致性」才可测，健康分随之变化。</span>
+      <button class="btn btn-secondary" style="margin-left:auto;font-size:12px" onclick="addFact()">+ 记一条</button></div>
+    <div class="tbl"><table class="table"><thead><tr><th style="width:120px">字段</th><th>AI 说的</th><th>官方口径</th><th style="width:90px">状态</th><th style="width:56px"></th></tr></thead><tbody>
+      ${fc.map((f,i)=>`<tr><td style="font-size:13px">${esc(f.field||'')}</td>
+        <td style="font-size:12.5px;color:var(--a300)">${esc(f.said||'')}</td>
+        <td style="font-size:12.5px;color:var(--t500)">${esc(f.truth||'')}</td>
+        <td><span class="tag ${f.state==='一致'?'pill-good':'tag-accent'}">${esc(f.state||'待比对')}</span></td>
+        <td><button class="btn btn-ghost" style="font-size:12px" onclick="delFact(${i})">删</button></td></tr>`).join('')||'<tr><td colspan="5" class="muted" style="font-size:12.5px">还没有比对记录</td></tr>'}
+    </tbody></table></div>`;
+  }
+  return `<div style="padding:32px 44px 72px;max-width:1280px">
+    ${head('诊断 · 差距诊断','分数低只有三个原因，按顺序修','AI 要引用你，需要同时满足：有东西可引（内容）、在它看的地方（阵地）、说得对（事实）。三者有序——内容没写，铺阵地是白铺。')}
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:24px 0 16px">
+      ${cards.map(c=>`<div class="card" style="padding:18px;cursor:pointer;${gt===c.k?'box-shadow:0 0 0 1px var(--a700)':'box-shadow:var(--sh-sm)'}" onclick="ST.gapTab='${c.k}';render()">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)">${c.order}</span>
+          <span class="tag ${c.k==='content'?'tag-accent':'tag-dim'}">${c.sev}</span></div>
+        <div style="font-size:18px;font-weight:500;margin-top:4px">${c.name}</div>
+        <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:30px;font-weight:500">${c.v}</span>
+          <span style="font-size:12px;color:var(--t600)">${c.unit}</span></div>
+        <div style="font-size:12.5px;color:var(--t400);line-height:1.5">${c.why}</div>
+      </div>`).join('')}
+    </div>
+    <div class="card elev" style="padding:20px">
+      <div class="row" style="margin-bottom:12px">${tab('content','内容缺口 · '+contentGap.length)}${tab('channel','阵地缺口 · '+chanGap.length)}${tab('fact','事实偏差 · '+fc.length)}</div>
+      ${body}
+    </div>
+  </div>`;
+}
+async function addFact(pre){
+  modal(`<h4 style="font-size:17px">记录一条事实比对</h4>
+    <div class="field"><label>字段（如：适用规模 / 成立时间 / 价格）</label><input id="f-field" class="input" value="${esc(typeof pre==='string'?pre:'')}"></div>
+    <div class="field"><label>AI 说的（样本原话）</label><input id="f-said" class="input"></div>
+    <div class="field"><label>官方口径</label><input id="f-truth" class="input"></div>
+    <div class="field"><label>状态</label><div class="seg">
+      <label class="seg-opt"><input type="radio" name="fst" value="被说错" checked>被说错</label>
+      <label class="seg-opt"><input type="radio" name="fst" value="缺失">缺失</label>
+      <label class="seg-opt"><input type="radio" name="fst" value="一致">一致</label></div></div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveFact()">保存</button></div>`);
+}
+async function saveFact(){
+  const items=(D.analytics.factcheck||[]).slice();
+  items.push({field:$('#f-field').value.trim(),said:$('#f-said').value.trim(),
+    truth:$('#f-truth').value.trim(),state:document.querySelector('input[name=fst]:checked').value});
+  const r=await post('/api/factcheck/'+SLUG,{items});
+  toast(r.ok?'已记录（健康分将随之更新）':'失败',r.ok?'':'err');
+  if(r.ok){closeModal();load(SLUG,true)}
+}
+async function delFact(i){
+  const items=(D.analytics.factcheck||[]).slice();items.splice(i,1);
+  await post('/api/factcheck/'+SLUG,{items});load(SLUG,true);
+}
+
+/* ===================== 阵地地图 ===================== */
+function vChannels(){
+  const bp=D.blueprint;
+  if(!bp)return `<div style="padding:32px 44px">${head('诊断 · 阵地地图','还没有建设蓝图','到「设置 → 运行任务」跑「生成建设蓝图」。')}</div>`;
+  const chs=bp.channels||[],cov=bp.coverage;
+  if(ST.chanSel){const sel=ST.chanSel;ST.chanSel=null; // 从「差距诊断 · 建设方案」跳来：定位并打开详情
+    setTimeout(()=>{const el=document.querySelector(`[data-chan="${CSS.escape(sel)}"]`);
+      if(el){el.scrollIntoView({block:'center'});el.style.boxShadow='0 0 0 2px var(--accent)';
+        setTimeout(()=>el.style.boxShadow='var(--sh-sm)',2600)}
+      chanOpen(sel)},60)}
+  const tiers=[['P0','地基 · 不做后面全白做'],['P1','放大 · 地基之后立刻做'],['P2','补充 · 有余力再做']];
+  return `<div style="padding:32px 44px 72px;max-width:1280px">
+    ${head('诊断 · 阵地地图','在哪些地方建、各建什么、建多少','「阵地」= 能被 AI 引用的站点。每条都标了它在 CN-GEO 187,818 条真实引用中的分量，不是拍脑袋排的。带 ✓ 的是本期采样中已被引用的阵地。')}
+    <div style="display:flex;align-items:center;gap:14px;margin:22px 0 18px">
+      <span class="bar" style="flex:1;height:8px"><span style="width:${(cov.channel_covered/Math.max(1,cov.channel_total)*100).toFixed(0)}%"></span></span>
+      <span style="font-size:12.5px;color:var(--t400);flex:none">阵地覆盖 ${cov.channel_covered} / ${cov.channel_total} · ${pct(cov.channel_covered/Math.max(1,cov.channel_total))}</span>
+    </div>
+    ${tiers.map(([tier,label])=>{
+      const items=chs.filter(c=>c.priority===tier);
+      if(!items.length)return'';
+      return `<div style="margin-bottom:26px">
+        <div class="row" style="margin-bottom:10px">
+          <span class="tag ${tier==='P0'?'tag-accent':tier==='P1'?'tag-neutral':'tag-dim'}">${tier}</span>
+          <span style="font-size:14px;font-weight:500">${label}</span>
+          <span style="font-size:12px;color:var(--t600)">已覆盖 ${items.filter(c=>c.covered).length} / ${items.length}</span></div>
+        ${items.map(c=>`<div data-chan="${esc(c.name)}" style="padding:14px 16px;border-radius:var(--r-md);background:var(--surface);box-shadow:var(--sh-sm);margin-bottom:8px;cursor:pointer"
+          title="点击查看建设详情" onclick="chanOpen(${esc(JSON.stringify(c.name))})">
+          <div class="row">
+            <span class="dot" style="background:${c.covered?'var(--a400)':'#595d6c'}"></span>
+            <span style="font-size:15px;font-weight:500">${esc(c.name)}</span>
+            <span class="tag tag-outline">${esc(c.kind)}</span>
+            <span style="font-size:11.5px;color:var(--t600)">${c.national?('引用量 '+c.national.toLocaleString()):''}${c.position?(' · 平均位置 '+c.position):''}${c.platforms?(' · 覆盖 '+c.platforms+' 端'):''}</span>
+            ${(c.fits||[]).length?(()=>{const qs=chanFitQs(c);const dn=qs.filter(q=>distOf(q.id,c.id)).length;
+              return `<span class="tag ${dn?'tag-outline':'tag-dim'}" style="font-size:10.5px" title="承接 ${esc(c.fits.join('/'))} 类问题的内容">适配 ${qs.length} 题 · 已铺 ${dn}</span>`})():''}
+            <span class="tag ${c.covered?'pill-good':'tag-accent'}" style="margin-left:auto">${c.covered?'✓ 已被引用':'未建'}</span></div>
+          <div style="font-size:12.5px;color:var(--t400);margin-top:7px;line-height:1.5">${esc(c.why).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}</div>
+          <div class="spec" style="margin-top:11px">
+            <div><div class="k">建什么</div><div class="v">${esc((c.forms||[]).join(' / '))}</div></div>
+            <div><div class="k">建多少</div><div class="v">${esc(c.volume)}</div></div>
+            <div><div class="k">节奏</div><div class="v">${esc(c.cadence)}</div></div>
+            <div><div class="k">谁来做</div><div class="v">${esc(c.owner)}</div></div>
+          </div></div>`).join('')}
+      </div>`}).join('')}
+    ${(bp.roadmap||[]).length?`<h4 style="font-size:16px;margin:8px 0 10px">分批建设节奏</h4>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+      ${bp.roadmap.map(r=>`<div class="card elev" style="padding:14px 16px;gap:4px">
+        <div style="font-size:13px;font-weight:500">${esc(r.window)} · ${esc(r.focus)}</div>
+        <ul style="margin:4px 0 0;padding-left:17px;font-size:12.5px;color:var(--t400);line-height:1.75">
+          ${r.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`).join('')}
+    </div>`:''}
+  </div>`;
+}
+
+/* 内容 ↔ 阵地关联：阵地的 fits 声明它承接哪些问题组（口径在 blueprint.py CHANNEL_FITS） */
+function chanFitQs(c){
+  return (D.analytics.questions||[]).filter(q=>!q.brand_probe
+    &&(c.fits||[]).includes(q.group)&&(q.market==='both'||q.market===c.market));
+}
+function distOf(qid,chid){return !!(((D.distribution||{})[qid]||{})[chid])}
+async function distToggle(qid,ch,on){
+  const r=await post('/api/distribution/'+SLUG,{qid,channel:ch,on});
+  if(r.ok){D.distribution=r.distribution;toast(on?'已标记铺设 ✓':'已取消标记');render()}
+  else toast('失败：'+(r.error||''),'err');
+}
+function chanOpen(name){
+  const c=((D.blueprint||{}).channels||[]).find(x=>x.name===name);
+  if(!c){toast('蓝图里没有这个阵地','err');return}
+  const rel=(D.tasks||[]).filter(t=>(t.title||'').indexOf(name.split('（')[0].split(' / ')[0])>=0);
+  modal(`<h4 style="font-size:17px">${esc(c.name)}</h4>
+    <div class="row" style="gap:6px;margin-top:6px">
+      <span class="tag ${c.priority==='P0'?'tag-accent':c.priority==='P1'?'tag-neutral':'tag-dim'}">${c.priority}</span>
+      <span class="tag tag-outline">${esc(c.kind||'')}</span>
+      <span class="tag ${c.covered?'pill-good':'tag-accent'}">${c.covered?'✓ 本期已被引用':'未建'}</span>
+      <span style="font-size:11.5px;color:var(--t600)">${c.national?('全库引用量 '+c.national.toLocaleString()):''}${c.position?(' · 平均引用位置 '+c.position):''}${c.platforms?(' · 覆盖 '+c.platforms+' 个平台端'):''}</span></div>
+    <p style="font-size:13px;color:var(--t400);line-height:1.6;margin:10px 0 4px">${esc(c.why||'').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}</p>
+    <div style="font-size:12px;color:var(--t600);margin:10px 0 4px">建什么（逐项做完为止）</div>
+    <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.8">
+      ${(c.forms||[]).map(f=>`<li>${esc(f)}</li>`).join('')||'<li class="muted">蓝图未给出具体形式</li>'}</ul>
+    <div class="spec" style="margin-top:12px">
+      <div><div class="k">建多少</div><div class="v">${esc(c.volume||'—')}</div></div>
+      <div><div class="k">节奏</div><div class="v">${esc(c.cadence||'—')}</div></div>
+      <div><div class="k">谁来做</div><div class="v">${esc(c.owner||'—')}</div></div>
+      <div><div class="k">相关工单</div><div class="v">${rel.length?rel.map(t=>esc(t.id)).join('、'):'—'}</div></div>
+    </div>
+    ${(c.fits||[]).length?(()=>{const qs=chanFitQs(c);
+      const done=qs.filter(q=>distOf(q.id,c.id)).length;
+      const sorted=qs.slice().sort((a,b)=>{
+        const w=q=>distOf(q.id,c.id)?3:q.content==='已成稿'?0:q.content==='缺口'?2:1;
+        return w(a)-w(b)});
+      return `<div style="font-size:12px;color:var(--t600);margin:12px 0 4px">适合放这里的内容
+        <span class="muted">（承接 ${c.fits.join('/')} 类 · 共 ${qs.length} 题 · 已铺 ${done}）</span></div>
+      ${sorted.slice(0,6).map(q=>`<div class="row" style="gap:8px;padding:4px 0;font-size:12.5px;cursor:pointer;box-shadow:inset 0 -1px 0 var(--line)"
+          title="点击到内容工作台写/改这篇" onclick="closeModal();go('workbench',{wq:${esc(JSON.stringify(q.id))}})">
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${distOf(q.id,c.id)?'color:var(--t600)':''}">${esc(q.text)}</span>
+        <span class="tag ${q.content==='已成稿'?'pill-good':'tag-dim'}" style="font-size:10px;flex:none">${esc(q.content)}</span>
+        ${distOf(q.id,c.id)?'<span class="tag tag-outline" style="font-size:10px;flex:none">已铺 ✓</span>':''}</div>`).join('')}
+      ${qs.length>6?`<div class="muted" style="font-size:11px;padding-top:4px">…共 ${qs.length} 题，其余在问题库按类别筛</div>`:''}`})():
+      '<p class="muted" style="font-size:11.5px;margin-top:10px">该阵地是收录/基础设施型，不承接具体内容篇目。</p>'}
+    <p class="muted" style="font-size:11.5px;margin-top:10px">内容素材从「内容工作台」按目标问题产出；官网类阵地的部署片段在「部署资产」（含 DEPLOY.md 步骤与验收标准）。</p>
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      ${rel.length?`<button class="btn btn-ghost" style="margin-right:auto" onclick="closeModal();go('plan')">看相关工单 →</button>`:''}
+      <button class="btn btn-secondary" onclick="closeModal();go('workbench')">去内容工作台</button>
+      <button class="btn btn-primary" onclick="closeModal()">关闭</button></div>`);
+}
+
+/* ===================== 品牌事实库 ===================== */
+function vFacts(){
+  const f=D.facts_struct||{},fc=D.analytics.factcheck||[];
+  const aiOf=field=>{const m=fc.find(x=>(x.field||'')&&((x.field||'').indexOf(field)>=0||field.indexOf(x.field)>=0));
+    return m?{txt:m.said||'（缺失）',state:m.state}:{txt:'未比对——在「差距诊断 · 事实偏差」里记录',state:null}};
+  const cards=[{field:'一句话定位',value:f.definition||'（未填写）'}]
+    .concat((f.numbers||[]).map(n=>({field:n.fact,value:n.value+(n.source?('（'+n.source+'）'):'')})));
+  FACT_CARDS=cards.map(c=>({...c,ai:aiOf(c.field)}));
+  return `<div style="padding:32px 44px 72px;max-width:1180px">
+    ${head('诊断 · 品牌事实库','你希望 AI 怎么说你，写在这里一次','全站唯一口径来源：内容工作台生成草稿从这里取事实，llms.txt 与 JSON-LD 也由它生成。改这里，其他地方全跟着变。')}
+    <p class="muted" style="font-size:12.5px;margin-top:10px">每张卡 = 一条官方口径。用法：<b>点卡片</b> → 对照「AI 当前说法」记一条比对（比对过「事实一致性」才可测、健康分才完整），或直接编辑源文件改口径。改完点下方「重新生成」同步到 llms.txt 与结构化数据。</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px">
+      ${FACT_CARDS.map((c,i)=>`<div class="card elev" style="padding:16px;gap:7px;cursor:pointer" title="点击：记录比对 / 编辑口径" onclick="factModal(${i})">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--t600)">${esc(c.field)}</span>
+          ${c.ai.state?`<span class="tag ${c.ai.state==='一致'?'pill-good':'tag-accent'}">${c.ai.state}</span>`:'<span class="tag tag-dim">未比对</span>'}</div>
+        <div style="font-size:14px;line-height:1.55">${esc(c.value)}</div>
+        <div style="font-size:11.5px;color:var(--t600);line-height:1.45">AI 当前说法：${esc(c.ai.txt)}</div>
+      </div>`).join('')||'<div class="muted">事实卡还没有可解析的内容</div>'}
+    </div>
+    <div class="row" style="margin-top:22px">
+      <button class="btn btn-primary" onclick="runAction('generate',{'--asset':'llms,jsonld,snippets'})">重新生成 llms.txt 与结构化数据</button>
+      <a class="btn btn-secondary" target="_blank" href="/files/${SLUG}/assets/llms.txt">查看 llms.txt</a>
+      <button class="btn btn-secondary" onclick="editFactsSrc()">编辑源文件</button>
+    </div>
+    <p class="muted" style="font-size:12px;margin-top:14px">纪律：一句话定位必须在官网首屏、关于页、JSON-LD description、llms.txt 四处逐字一致。生成文件的去处见资产目录里的 DEPLOY.md。</p>
+  </div>`;
+}
+let FACT_CARDS=[];
+function factModal(i){
+  const c=FACT_CARDS[i];if(!c)return;
+  modal(`<h4 style="font-size:17px">${esc(c.field)}</h4>
+    <div style="font-size:12px;color:var(--t600);margin:10px 0 3px">官方口径（你希望 AI 这么说）</div>
+    <div style="font-size:13.5px;line-height:1.6">${esc(c.value)}</div>
+    <div style="font-size:12px;color:var(--t600);margin:12px 0 3px">AI 当前说法 ${c.ai.state?`<span class="tag ${c.ai.state==='一致'?'pill-good':'tag-accent'}" style="font-size:10px">${c.ai.state}</span>`:'<span class="tag tag-dim" style="font-size:10px">未比对</span>'}</div>
+    <div style="font-size:13px;line-height:1.6;color:var(--t400)">${esc(c.ai.txt)}</div>
+    <p class="muted" style="font-size:11.5px;margin-top:10px">「AI 当前说法」来自「引擎表现 → 样本回放」的真实回答。人工比对后记一条，「事实一致性」才会进健康分。</p>
+    <div class="row" style="justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-ghost" style="margin-right:auto" onclick="closeModal();editFactsSrc()">编辑口径（源文件）</button>
+      <button class="btn btn-secondary" onclick="closeModal()">关闭</button>
+      <button class="btn btn-primary" onclick="closeModal();addFact(${esc(JSON.stringify(c.field))})">记一条比对</button></div>`);
+}
+async function editFactsSrc(){
+  const f=await api('/api/facts/'+SLUG);
+  modal(`<h4 style="font-size:17px">品牌事实卡 · 源文件</h4>
+    <p class="muted" style="font-size:12px">Markdown。每条事实标证据等级 A–E；没来源的标「待确认」，不许编。保存后点「重新生成」同步到资产。</p>
+    <textarea id="factsrc" class="input" rows="20">${esc(f.text||'')}</textarea>
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveFactsSrc()">保存</button></div>`);
+}
+async function saveFactsSrc(){
+  const r=await post('/api/facts/'+SLUG,{text:$('#factsrc').value});
+  toast(r.ok?'已保存':'失败',r.ok?'':'err'); if(r.ok){closeModal();load(SLUG,true)}
+}
+
+/* ===================== 行动计划 ===================== */
+function vPlan(){
+  const ts=D.tasks||[];
+  const cnt=s=>ts.filter(t=>t.status===s).length;
+  return `<div style="padding:32px 44px 72px;max-width:1280px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+      <div>${head('提升 · 行动计划',ts.length+' 项任务，全部来自上面的差距',
+        '每条任务都带来源、负责角色和验收方式——标「自动」的做完后由下一次采样与重抓判定是否生效，不需要人工回填。')}</div>
+      <div class="row" style="flex:none">
+        ${(D.deliveries||[]).length?`<a class="btn btn-secondary" href="/files/${SLUG}/delivery/${D.deliveries[0]}/03-工单表.csv">导出 CSV</a>`:''}
+        <button class="btn btn-primary" onclick="runAction('verify')">自动验收</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0 18px">
+      ${[['待开始',cnt('todo'),''],['进行中',cnt('doing'),''],['受阻',cnt('blocked'),''],['已完成',cnt('done'),'color:var(--accent)']].map(([l,v,st])=>
+        `<div class="card elev" style="padding:14px;gap:2px"><div style="font-size:11.5px;color:var(--t500)">${l}</div>
+        <div style="font-size:26px;font-weight:500;${st}">${v}</div></div>`).join('')}
+    </div>
+    <div class="tbl"><table class="table"><thead><tr>
+      <th style="width:44px"></th><th>任务</th><th style="width:110px">来源</th><th style="width:80px">工作量</th>
+      <th style="width:90px">负责</th><th style="width:170px">状态</th><th style="width:66px"></th></tr></thead><tbody>
+      ${ts.slice().sort((a,b)=>((a.status==='done')-(b.status==='done'))||a.priority.localeCompare(b.priority)).map(t=>`<tr>
+        <td><span class="tag ${t.priority==='P0'?'tag-accent':t.priority==='P1'?'tag-neutral':'tag-dim'}">${t.priority}</span></td>
+        <td><div style="font-size:13.5px;cursor:pointer" title="点击看任务详情：为什么做、具体怎么干、怎么算做完"
+            onclick="taskModal(${esc(JSON.stringify(t.id))})">${esc(t.id)} · ${esc(t.title)} <span style="color:var(--a300);font-size:11px">详情</span></div>
+          <div style="font-size:11px;color:var(--t600)">验收（${(t.acceptance||{}).type==='auto'?'自动':'人工'}）：${esc((t.acceptance||{}).desc||'')}</div>
+          ${progBar(t.progress,t.progress_first)}</td>
+        <td style="font-size:12px;color:var(--t500)">${esc(t.package)}</td>
+        <td style="font-size:12.5px;color:var(--t400)">${esc(t.effort)}</td>
+        <td style="font-size:12.5px;color:var(--t400)">${esc(t.owner)}</td>
+        <td><div class="row" style="gap:4px">${['todo','doing','blocked','done'].map(s=>
+          `<button class="btn ${t.status===s?'btn-primary':'btn-ghost'}" style="font-size:11px;padding:2px 7px"
+            onclick="setTask(${esc(JSON.stringify(t.id))},'${s}')">${({todo:'待开始',doing:'进行中',blocked:'受阻',done:'完成'})[s]}</button>`).join('')}</div></td>
+        <td>${t.package==='内容矩阵'?`<button class="btn btn-ghost" style="font-size:12px" onclick="go('workbench')">打开</button>`:''}</td>
+      </tr>`).join('')}
+    </tbody></table></div>
+  </div>`;
+}
+function taskModal(id){
+  const t=(D.tasks||[]).find(x=>x.id===id);
+  if(!t)return;
+  const acc=t.acceptance||{};
+  const ev=(t.evidence||[]).slice(-3).reverse();
+  modal(`<h4 style="font-size:17px">${esc(t.id)} · ${esc(t.title)}</h4>
+    <div class="row" style="gap:6px;margin-top:6px">
+      <span class="tag ${t.priority==='P0'?'tag-accent':'tag-neutral'}">${t.priority}</span>
+      <span class="tag tag-outline">${esc(t.package)}</span>
+      <span style="font-size:11.5px;color:var(--t600)">负责：${esc(t.owner)} · 工作量 ${esc(t.effort)} · 窗口 ${esc(t.window||'—')} · ${mktLabel(t.market)}</span></div>
+    <div style="font-size:12px;color:var(--t600);margin:12px 0 3px">为什么做</div>
+    <div style="font-size:13px;line-height:1.6;color:var(--t400)">${esc(t.why||'—')}</div>
+    <div style="font-size:12px;color:var(--t600);margin:12px 0 3px">具体怎么干</div>
+    <div style="font-size:13px;line-height:1.6">${esc(t.action||'—')}</div>
+    <div style="font-size:12px;color:var(--t600);margin:12px 0 3px">怎么算做完（${acc.type==='auto'?'自动验收——重抓/采样后系统判定，不靠人说':'人工验收'}）</div>
+    <div style="font-size:13px;line-height:1.6">${esc(acc.desc||'—')}${acc.check?`<div class="muted" style="font-size:11.5px;margin-top:2px">检查器：<code>${esc(acc.check)}</code></div>`:''}</div>
+    ${progBar(t.progress,t.progress_first)}
+    ${(t.affected||[]).length?`<div style="font-size:12px;color:var(--t600);margin:12px 0 3px">受影响页面（${t.affected.length}）</div>
+      <div style="max-height:120px;overflow:auto;font-size:11.5px;line-height:1.7;color:var(--t500)">${t.affected.slice(0,20).map(u=>`<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(u)}</div>`).join('')}${t.affected.length>20?`<div class="muted">…共 ${t.affected.length} 个</div>`:''}</div>`:''}
+    ${ev.length?`<div style="font-size:12px;color:var(--t600);margin:12px 0 3px">最近验收记录</div>
+      ${ev.map(e=>`<div style="font-size:11.5px;color:var(--t500);padding:2px 0">${esc((e.at||'').slice(0,16).replace('T',' '))} · ${({pass:'✓ 通过',fail:'✗ 未达标',manual:'待人工'})[e.result]||esc(e.result)} · ${esc(e.note||'')}</div>`).join('')}`:''}
+    <div class="row" style="justify-content:flex-end;margin-top:14px">
+      ${t.package==='内容矩阵'?`<button class="btn btn-secondary" style="margin-right:auto" onclick="closeModal();go('workbench')">去内容工作台</button>`:''}
+      <button class="btn btn-primary" onclick="closeModal()">关闭</button></div>`);
+}
+async function setTask(id,status){
+  const r=await post('/api/task',{slug:SLUG,id,status});
+  if(!r.ok){toast(r.error||'失败','err');return}
+  const t=(D.tasks||[]).find(x=>x.id===id);if(t)t.status=status;render();
+}
+
+/* ===================== 内容工作台 ===================== */
+let WB={qid:null,sources:[],cur:null,text:'',check:null,q:null};
+async function loadWB(qid){
+  const w=await api(`/api/workbench/${SLUG}?qid=${encodeURIComponent(qid||'')}`);
+  WB.qid=qid;WB.sources=w.sources||[];WB.q=w.question;WB.cur=null;WB.text='';WB.check=null;
+  WB.miss=(qid&&!WB.q&&!w.error)?qid:null;
+  if(WB.sources.length)await loadWBFile(0); else render();
+}
+async function loadWBFile(i){
+  WB.cur=WB.sources[i];
+  const s=WB.cur;let r;
+  if(s.kind==='content')r=await api(`/api/content/${SLUG}?path=${encodeURIComponent(s.path)}`);
+  else r=await api(`/api/asset/${SLUG}?path=${encodeURIComponent(s.path)}`);
+  WB.text=r.text||'';
+  const ck=await post('/api/precheck',{text:WB.text});WB.check=(ck&&ck.error)?null:ck;
+  render();
+}
+function vWorkbench(){
+  if(ST.wq&&ST.wq!==WB.qid){const q=ST.wq;setTimeout(()=>loadWB(q),0);ST.wq=null;
+    return `<div style="padding:44px" class="muted">加载中…</div>`}
+  const q=WB.q,a=D.analytics;
+  const stat=q?(a.questions||[]).find(x=>x.id===q.id):null;
+  const facts=(D.facts_struct||{}).numbers||[];
+  const ck=WB.check;
+  const fitChs=q?((D.blueprint||{}).channels||[]).filter(c=>(c.fits||[]).includes(q.group)
+    &&(q.market==='both'||c.market===q.market)).sort((a,b)=>a.priority.localeCompare(b.priority)):[];
+  return `<div style="padding:28px 36px 60px">
+    <div class="row" style="font-size:12px;color:var(--t600);margin-bottom:14px">
+      <button class="btn btn-ghost" style="font-size:12px;padding:0" onclick="go('plan')">← 行动计划</button><span>/</span>
+      <span>${q?esc(q.id+' · '+q.text):'选择一个问题'}</span>
+      ${q?`<button class="btn btn-ghost" style="font-size:12px;margin-left:8px" onclick="wbReset()">换一题 →</button>`:''}
+    </div>
+    ${q?`<div class="wb3">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card elev" style="padding:14px;gap:8px">
+          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--t600)">这条任务要解决</div>
+          <div style="font-size:13.5px;line-height:1.5">${esc(q.text)}</div>
+          <div style="font-size:11.5px;color:var(--t500)">${stat?('你当前提及 '+(stat.mention==null?'未采样':pct(stat.mention))+' · '+stat.samples+' 样本 · 内容'+stat.content):''}</div>
+        </div>
+        <div class="card elev" style="padding:14px;gap:9px">
+          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--t600)">必须包含的抽取块（实测增益）</div>
+          ${(ck?ck.checks.slice(2):[]).map(c=>`<div class="row" style="gap:8px;font-size:12.5px">
+            <span class="dot" style="background:${c.ok?'var(--accent)':'#595d6c'}"></span>
+            <span style="flex:1">${esc(c.t)}</span><span style="font-size:11px;color:var(--t600)">${esc(c.lift)}</span></div>`).join('')||'<div class="muted" style="font-size:12px">载入草稿后显示</div>'}
+        </div>
+        <div class="card elev" style="padding:14px;gap:8px">
+          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--t600)">从事实库取用</div>
+          <div style="font-size:12.5px;color:var(--t400);line-height:1.55">${facts.slice(0,4).map(n=>esc(n.fact+' '+n.value)).join(' · ')||'事实库为空'}</div>
+          <button class="btn btn-ghost" style="align-self:flex-start;font-size:12px" onclick="go('facts')">打开事实库 →</button>
+        </div>
+      </div>
+      <div class="card elev" style="padding:0;overflow:hidden">
+        <div class="row" style="padding:11px 14px;box-shadow:inset 0 -1px 0 var(--divider)">
+          ${WB.sources.map((s,i)=>`<button class="btn ${WB.cur===s?'btn-primary':'btn-ghost'}" style="font-size:12px"
+            onclick="loadWBFile(${i})">${({content:'成稿',draft:'AI 初稿',outline:'大纲'})[s.kind]}</button>`).join('')||'<span class="muted" style="font-size:12px">还没有任何底稿——先跑「生成资产」出大纲</span>'}
+          <span style="margin-left:auto" class="row">
+            <button class="btn btn-ghost" style="font-size:12px" onclick="wbCheck()">重新预检</button>
+            <button class="btn btn-secondary" style="font-size:12px" onclick="wbSave()">保存</button>
+            ${WB.cur&&WB.cur.kind!=='content'?`<button class="btn btn-primary" style="font-size:12px" onclick="wbPublish()">发布为成稿</button>`:''}
+            ${WB.cur&&WB.cur.kind==='content'?`<button class="btn btn-primary" style="font-size:12px" onclick="pubModal()">发布到渠道…</button>`:''}</span>
+        </div>
+        <textarea id="wbtext" class="input" style="border:0;border-radius:0;min-height:480px" oninput="WB.text=this.value">${esc(WB.text)}</textarea>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card elev" style="padding:14px;gap:10px">
+          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--t600)">可被引用度预检</div>
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <span style="font-size:34px;font-weight:500;color:var(--accent)">${ck?ck.grade:'—'}</span>
+            <span style="font-size:12px;color:var(--t500)">${ck?(ck.wc+' 词 · '+ck.h2+' 个小节'):''}</span></div>
+          ${(ck?ck.checks.slice(0,2):[]).map(c=>`<div class="row" style="gap:8px;font-size:12.5px">
+            <span class="dot" style="background:${c.ok?'var(--accent)':'#595d6c'}"></span><span>${esc(c.t)}</span></div>`).join('')}
+        </div>
+        ${WB.cur&&WB.cur.kind==='draft'&&D.lint&&D.lint.total?`<div class="card" style="padding:12px 14px;box-shadow:0 0 0 1px var(--a700);gap:5px">
+          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)">初稿风险</div>
+          <div style="font-size:12.5px;color:var(--t400);line-height:1.5">该初稿所在批次有 <b>${D.lint.total}</b> 项待人工核实（高风险 ${D.lint.high}）。
+            AI 会为填满表格而编造竞品名和参数——发布前逐条核对。明细在「部署资产」的 _lint.json。</div></div>`:''}
+        <div class="card elev" style="padding:14px;gap:8px">
+          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--t600)">发布后要做（人工）</div>
+          <div style="font-size:12.5px;color:var(--t400);line-height:1.6">① 发布到官网或对应阵地<br>② 提交百度 / Bing / 夸克收录<br>③ 下一期采样自动回查这道题<br>④ 「效果验收」页看前后对比</div>
+        </div>
+        <div class="card elev" style="padding:14px;gap:6px">
+          <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--t600)">分发清单 · 这篇该铺到哪</div>
+          <div class="muted" style="font-size:11px">按问题类别（${esc(q.group)}）与市场匹配的阵地。铺完勾掉——阵地地图同步统计。</div>
+          ${fitChs.map(c=>`<label class="row" style="gap:8px;padding:4px 0;font-size:12.5px;cursor:pointer;box-shadow:inset 0 -1px 0 var(--line)">
+            <input type="checkbox" style="width:auto" ${distOf(q.id,c.id)?'checked':''} onchange="distToggle(${esc(JSON.stringify(q.id))},${esc(JSON.stringify(c.id))},this.checked)">
+            <span style="flex:1;${distOf(q.id,c.id)?'color:var(--t600);text-decoration:line-through':''}">${esc(c.name.split('（')[0])}</span>
+            <span class="tag ${c.priority==='P0'?'tag-accent':'tag-dim'}" style="font-size:10px">${c.priority}</span>
+            <span class="tag tag-outline" style="font-size:10px;cursor:pointer" onclick="event.preventDefault();chanOpen(${esc(JSON.stringify(c.name))})">详情</span></label>`).join('')
+            ||'<span class="muted" style="font-size:12px">该类别暂无适配阵地</span>'}
+        </div>
+      </div>
+    </div>`:`<div class="card elev" style="padding:22px 24px;max-width:820px;gap:10px">
+      <div style="font-size:15px;font-weight:500">选一个问题，就地开写</div>
+      ${WB.miss?`<div style="font-size:13px;color:var(--a300);padding:10px 12px;border-radius:var(--r-md);background:var(--deep)">该问题（${esc(WB.miss)}）不在问题库中，从下面重选一个</div>`:''}
+      <p class="soft" style="font-size:13px;margin:0">下面就是选题池，按「最该写」排序——未提及、无内容的排最前。点任意一行直接进入写作，自动带上该问题的现有底稿、事实库数据和预检。</p>
+      <input class="input" placeholder="搜问题…" style="max-width:340px" value="${esc(ST.wbFilter||'')}" oninput="wbFilterList(this.value)">
+      <div id="wbpick" style="max-height:440px;overflow:auto">${wbPickRows()}</div>
+      <div class="muted" style="font-size:11.5px">要看完整指标（提及率、类别、市场）？<span style="color:var(--a300);cursor:pointer" onclick="go('questions')">打开问题库 →</span>　那边每行的「写内容」也会回到这里。</div>
+    </div>`}
+  </div>`;
+}
+function wbPickRows(){
+  const f=(ST.wbFilter||'').toLowerCase();
+  const qs=(D.analytics.questions||[]).filter(q=>!q.brand_probe&&(!f||q.text.toLowerCase().includes(f)));
+  return qs.map(q=>`<div class="row" style="gap:10px;padding:9px 10px;border-radius:var(--r-md);cursor:pointer;box-shadow:inset 0 -1px 0 var(--line)"
+      onmouseover="this.style.background='var(--deep)'" onmouseout="this.style.background=''"
+      onclick="go('workbench',{wq:${esc(JSON.stringify(q.id))}})">
+    <span style="flex:1;font-size:13px">${esc(q.text)}</span>
+    ${diagTag(q.diagnosis)}
+    <span style="font-size:11.5px;color:${q.content==='已成稿'?'var(--a300)':'var(--t600)'};flex:none">${esc(q.content)}</span>
+    <span class="muted" style="font-size:11px;flex:none">${mktLabel(q.market)}</span></div>`).join('')
+    ||'<div class="muted" style="font-size:12.5px;padding:10px">没有匹配的问题</div>';
+}
+function wbFilterList(v){ST.wbFilter=v;const el=$('#wbpick');if(el)el.innerHTML=wbPickRows()}
+async function wbCheck(){WB.text=$('#wbtext').value;
+  const ck=await post('/api/precheck',{text:WB.text});WB.check=(ck&&ck.error)?null:ck;render()}
+async function wbPublish(){
+  // 草稿/大纲 → content/ 成稿：内容承接指标由此上涨。文件头写入 qid 供蓝图识别。
+  WB.text=$('#wbtext').value;
+  if(!WB.q){toast('没有目标问题','err');return}
+  if(WB.cur&&WB.cur.kind==='draft'&&D.lint&&D.lint.total)
+    if(!confirm(`初稿风险检查有 ${D.lint.total} 项待人工核实（高风险 ${D.lint.high}）。确认已核实事实？`))return;
+  let text=WB.text;
+  if(text.indexOf(WB.q.id)<0)text=`<!-- 目标问题 ${WB.q.id} -->\n\n`+text;
+  const r=await post('/api/content/'+SLUG,{path:`${WB.q.id}-成稿.md`,text});
+  if(!r.ok){toast('发布失败：'+(r.error||''),'err');return}
+  toast('已发布为成稿。重新生成蓝图后「内容承接」会更新');
+  runAction('blueprint');
+}
+function wbReset(){WB={qid:null,sources:[],cur:null,text:'',check:null,q:null};ST.wq=null;render()}
+async function pubModal(){
+  if(!WB.cur||WB.cur.kind!=='content'){toast('先切到成稿再发布','err');return}
+  if(!PUB)PUB=await api('/api/publish/'+SLUG);
+  const rel='content/'+WB.cur.path;
+  const ready=((PUB&&PUB.publishers)||[]).filter(x=>!x.missing.length);
+  const recs=((PUB&&PUB.records)||[]).filter(r=>r.path===rel).slice(-5).reverse();
+  modal(`<h4 style="font-size:17px">发布到渠道</h4>
+    <p class="muted" style="font-size:12px;margin-top:4px">文件：${esc(rel)}。发布是对外动作——点一次发一次；公众号 / WordPress 只建草稿，到各自后台确认后才对外。</p>
+    ${ready.map(x=>`<div class="row" style="padding:7px 0;box-shadow:inset 0 -1px 0 var(--line)">
+      <span style="flex:1;font-size:13px">${esc(x.name)}<span class="muted" style="font-size:11px;margin-left:6px">${esc(x.note)}</span></span>
+      <button class="btn btn-primary" style="font-size:12px" onclick="doPublish('${x.code}')">发布</button></div>`).join('')
+      ||'<div class="muted" style="font-size:12.5px">还没有就绪的渠道——到「设置 → 发布渠道」配置凭证</div>'}
+    ${recs.length?`<div style="margin-top:10px"><div style="font-size:12px;color:var(--t500);margin-bottom:4px">该文件的发布记录</div>
+      ${recs.map(r=>`<div style="font-size:12px;color:var(--t400);padding:3px 0">${r.ok?'✓':'✗'} ${esc((r.at||'').slice(0,16).replace('T',' '))} ${esc(r.platform_name)} ${r.url?`<a href="${esc(r.url)}" target="_blank" style="color:var(--a300)">${esc(r.url)}</a>`:esc(r.note||r.error||'')}</div>`).join('')}</div>`:''}
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-ghost" onclick="closeModal();go('settings')">渠道配置</button>
+      <button class="btn btn-secondary" onclick="closeModal()">关闭</button></div>`);
+}
+async function doPublish(code){
+  const rel='content/'+WB.cur.path;
+  const name=((PUB&&PUB.publishers)||[]).find(x=>x.code===code)?.name||code;
+  if(!confirm(`确认发布「${WB.cur.path}」到「${name}」？`))return;
+  const r=await post('/api/publish/'+SLUG,{platform:code,path:rel});
+  toast(r.ok?('已发布'+(r.url?'：'+r.url:(r.note?'，'+r.note:''))):('发布失败：'+(r.error||'')),r.ok?'':'err');
+  PUB=null;if(r.ok)pubModal();
+}
+async function wbSave(){
+  WB.text=$('#wbtext').value;
+  const s=WB.cur;if(!s){toast('没有底稿可保存','err');return}
+  let r;
+  if(s.kind==='content')r=await post('/api/content/'+SLUG,{path:s.path,text:WB.text});
+  else r=await post('/api/asset/'+SLUG,{path:s.path,text:WB.text});
+  toast(r.ok?'已保存':'保存失败：'+(r.error||''),r.ok?'':'err');
+}
+
+/* ===================== 效果验收 ===================== */
+function vVerify(){
+  const a=D.analytics,vh=D.verify_history||[];
+  const mk=ST.vfMkt||'all';
+  const qd=(a.q_delta||[]).filter(x=>mk==='all'||x.market===mk||x.market==='both');
+  const meas=qd.filter(x=>x.after!=null);
+  const up=meas.filter(x=>(x.after||0)>(x.before||0)),down=meas.filter(x=>(x.after||0)<(x.before||0));
+  const last=vh.length?vh[vh.length-1]:null;
+  const mtab=(k,l)=>`<button class="btn ${mk===k?'btn-secondary':'btn-ghost'}" style="font-size:12px;padding:3px 10px" onclick="ST.vfMkt='${k}';render()">${l}</button>`;
+  return `<div style="padding:32px 44px 72px;max-width:1180px">
+    ${head('成效 · 效果验收','做过的事，哪些真的让 AI 改了口','两条证据链：任务的自动验收（重抓站点判定），和逐题的前后期采样对比。归因纪律：单期波动默认只作观察相关。')}
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0 18px">
+      <div class="card elev" style="padding:15px;gap:3px"><div style="font-size:11.5px;color:var(--t500)">提及率上升的问题</div>
+        <div style="font-size:27px;font-weight:500;color:var(--accent)">${up.length}</div>
+        <div style="font-size:11px;color:var(--t600)">${qd.length?('对比 '+qd[0].dates[0]+' → '+qd[0].dates[1]):'需两期采样'}</div></div>
+      <div class="card elev" style="padding:15px;gap:3px"><div style="font-size:11.5px;color:var(--t500)">下降的问题</div>
+        <div style="font-size:27px;font-weight:500">${down.length}</div>
+        <div style="font-size:11px;color:var(--t600)">下降未必是变差——采样有噪声</div></div>
+      <div class="card elev" style="padding:15px;gap:3px"><div style="font-size:11.5px;color:var(--t500)">任务自动验收</div>
+        <div style="font-size:27px;font-weight:500">${last?last.pass:'—'}<span style="font-size:14px;color:var(--t600)"> 通过</span></div>
+        <div style="font-size:11px;color:var(--t600)">${last?('未达标 '+last.fail+' · 待人工 '+last.manual+' · '+last.date):'尚未运行'}</div></div>
+    </div>
+
+    <div class="row" style="margin:20px 0 8px">
+      <h4 style="font-size:16px;margin:0">逐题前后对比</h4>
+      <span class="row" style="gap:4px;margin-left:12px">${mtab('all','全部')}${mtab('cn','国内')}${mtab('global','海外')}</span>
+    </div>
+    <div class="tbl"><table class="table"><thead><tr><th>问题</th><th style="width:60px">市场</th><th style="width:170px">提及率变化</th><th style="width:110px">解读</th></tr></thead><tbody>
+      ${qd.filter(x=>x.before!=null||x.after!=null).slice(0,16).map(x=>{
+        const untested=x.after==null;
+        const d=untested?0:(x.after||0)-(x.before||0);
+        return `<tr><td style="font-size:13.5px">${esc(x.question)}</td>
+        <td style="font-size:12px;color:var(--t500)">${mktLabel(x.market)}</td>
+        <td><span style="color:var(--t400)">${x.before==null?'—':pct(x.before)}</span>
+          <span class="muted">→</span> <span style="color:${d>0?'var(--a400)':'var(--t400)'}">${x.after==null?'—':pct(x.after)}</span></td>
+        <td><span class="tag ${!untested&&d>0?'pill-good':'tag-dim'}">${untested?'本期未测':d>0?'上升':d<0?'下降':'持平'}</span></td></tr>`}).join('')||
+        `<tr><td colspan="4" class="muted" style="font-size:12.5px">${mk==='all'?'需要至少两期采样':'该市场暂无两期对比数据'}</td></tr>`}
+    </tbody></table></div>
+
+    ${(D.tasks||[]).some(t=>t.progress)?`<h4 style="font-size:16px;margin:28px 0 8px">任务级 before → after</h4>
+    <p class="muted" style="font-size:12px;margin-bottom:8px">首测 = 该任务第一次自动验收时的快照（before），当前 = 最近一次（after）。数字动没动，一眼可见——不靠人说做完了。</p>
+    <div class="tbl"><table class="table"><thead><tr><th style="width:44px"></th><th>任务</th><th style="width:320px">指标进度</th><th style="width:90px">状态</th></tr></thead><tbody>
+      ${(D.tasks||[]).filter(t=>t.progress).sort((a,b)=>a.priority.localeCompare(b.priority)).map(t=>{
+        const done=t.status==='done';
+        return `<tr><td><span class="tag ${t.priority==='P0'?'tag-accent':'tag-dim'}">${t.priority}</span></td>
+        <td style="font-size:13px">${esc(t.id)} · ${esc(t.title)}</td>
+        <td>${progBar(t.progress,t.progress_first)}</td>
+        <td><span class="tag ${done?'pill-good':'tag-dim'}">${done?'已验收':'未达标'}</span></td></tr>`}).join('')}
+    </tbody></table></div>`:''}
+
+    ${vh.length?`<h4 style="font-size:16px;margin:28px 0 8px">任务验收历史</h4>
+    <div class="tbl"><table class="table"><thead><tr><th style="width:110px">日期</th><th style="width:80px">通过</th><th style="width:80px">未达标</th><th style="width:80px">待人工</th><th>说明</th></tr></thead><tbody>
+      ${vh.slice(-8).reverse().map(v=>`<tr><td style="font-size:13px">${v.date}</td>
+        <td style="color:var(--a400)">${v.pass}</td><td>${v.fail}</td><td>${v.manual}</td>
+        <td style="font-size:12.5px;color:var(--t500)">重抓站点后自动判定；回归项自动打回行动计划</td></tr>`).join('')}
+    </tbody></table></div>`:''}
+  </div>`;
+}
+
+/* ===================== 报告与交付 ===================== */
+function vReport(){
+  const a=D.analytics,h=a.health,tr=a.trend||[];
+  const prev=tr.length>1&&tr[tr.length-2].health!=null?tr[tr.length-2]:null;
+  const summary=(()=>{
+    if(h.score==null)return'尚无采样数据，无法生成摘要。';
+    const l1=prev?('本期 GEO 健康分 '+prev.health+' → '+h.score+(h.score>prev.health?'，上升。':h.score<prev.health?'，下降。':'，持平。'))
+      :('当前 GEO 健康分 '+h.score+'（首期基线）。');
+    const l2='提及率 '+pct(h.subs.mention)+'、引用份额 '+pct(h.subs.cite)+'、阵地覆盖 '+pct(h.subs.channel)+'、内容承接 '+pct(h.subs.content)
+      +(h.subs.fact==null?'；事实一致性未测（需人工比对后记录）。':('、事实一致性 '+pct(h.subs.fact)+'。'));
+    const gap=(a.questions||[]).filter(q=>!q.brand_probe&&q.content!=='已成稿').length;
+    const chan=((D.blueprint||{}).channels||[]).filter(c=>!c.covered&&c.priority!=='P2').length;
+    return l1+'\n'+l2+'\n下一步：补 '+gap+' 个内容缺口中优先级最高的一批，建 '+chan+' 个 P0/P1 阵地。';
+  })();
+  const f=D.deliverables_files||[];
+  const cards=[
+    {who:'给老板',name:'一页结论',desc:'一句话结论、健康分、五项分项、下一步。打印或存 PDF。',
+     act:`<button class="btn btn-primary" style="font-size:12px" onclick="onePager()">生成</button>`},
+    {who:'给执行团队',name:'执行方案',desc:'分批排期、按角色拆分、每条的验收标准、可用资产清单。',
+     act:f.indexOf('3-GEO执行方案.html')>=0?`<a class="btn btn-primary" style="font-size:12px" target="_blank" href="/files/${SLUG}/deliverables/${encodeURIComponent('3-GEO执行方案.html')}">打开</a>`
+        :`<button class="btn btn-secondary" style="font-size:12px" onclick="runAction('deliverables')">生成</button>`},
+    {who:'给客户',name:'交付包',desc:'诊断报告、优化方案、工单表（CSV）、验收表、资产目录与说明。',
+     act:(D.deliveries||[]).length?`<a class="btn btn-primary" style="font-size:12px" target="_blank" href="/files/${SLUG}/delivery/${D.deliveries[0]}/index.html">打开</a>`
+        :`<button class="btn btn-secondary" style="font-size:12px" onclick="runAction('deliver')">生成</button>`},
+  ];
+  return `<div style="padding:32px 44px 72px;max-width:1180px">
+    ${head('成效 · 报告与交付','三个人要看三种报告','老板看结论，执行看清单，客户看方法与证据。内容和长度不同，数字都来自同一份采样。')}
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px">
+      ${cards.map(r=>`<div class="card elev" style="padding:18px;gap:8px">
+        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)">${r.who}</div>
+        <div style="font-size:18px;font-weight:500">${r.name}</div>
+        <div style="font-size:12.5px;color:var(--t400);line-height:1.55;flex:1">${r.desc}</div>
+        <div class="row" style="margin-top:6px">${r.act}</div></div>`).join('')}
+    </div>
+    <h4 style="font-size:16px;margin:34px 0 10px">本期摘要（自动生成）</h4>
+    <div class="card elev" style="padding:20px">
+      <div style="font-size:15px;line-height:1.7;color:#cfd3e5;max-width:760px;white-space:pre-line">${esc(summary)}</div>
+    </div>
+    <h4 style="font-size:16px;margin:34px 0 10px">人工采样表（无 API 的引擎）</h4>
+    <p class="muted" style="font-size:12.5px">豆包 App、元宝、百度 AI、ChatGPT 网页版、Google AI Overview 没有公开联网 API。导出采样表，逐题把完整答案原文粘进 <code>\`\`\`answer</code> 块，再导入。</p>
+    <div class="row">
+      <button class="btn btn-secondary" onclick="runAction('sample-sheet')">导出采样表</button>
+      ${(D.samples_sheets||[]).slice(0,4).map(s=>`<button class="btn btn-ghost" style="font-size:12px" onclick="editSheet(${esc(JSON.stringify(s))})">${esc(s)}</button>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:30px">
+      <div class="card elev" style="padding:16px;gap:6px">
+        <div style="font-size:14px;font-weight:500">历史诊断报告</div>
+        <div style="font-size:11.5px;color:var(--t600)">每期存档，可对比 delta。</div>
+        ${(D.reports||[]).map(d=>`<a style="font-size:13px" target="_blank" href="/files/${SLUG}/reports/${d}/report.html">${d}</a>`).join('')||'<span class="muted" style="font-size:12.5px">暂无</span>'}
+      </div>
+      <div class="card elev" style="padding:16px;gap:6px">
+        <div style="font-size:14px;font-weight:500">历史交付包</div>
+        <div style="font-size:11.5px;color:var(--t600)">每期打包的客户交付物。</div>
+        ${(D.deliveries||[]).map(d=>`<div style="font-size:13px"><a target="_blank" href="/files/${SLUG}/delivery/${d}/index.html">${d}</a>
+          <a class="muted" style="font-size:11.5px;margin-left:8px" href="/files/${SLUG}/delivery/${d}/03-工单表.csv">任务 CSV</a></div>`).join('')||'<span class="muted" style="font-size:12.5px">暂无</span>'}
+      </div>
+    </div>
+    <h4 style="font-size:16px;margin:30px 0 8px">自动交付</h4>
+    <p class="muted" style="font-size:12.5px">本产品不内置定时器。要每周自动跑并发送，用 Claude 的 schedule 能力挂
+      <code>geo.py serve --slug ${esc(SLUG)}</code>，跑完把 deliverables/ 发给收件人。</p>
+  </div>`;
+}
+function onePager(){
+  const a=D.analytics,h=a.health,w=window.open('','_blank');
+  if(!w){toast('浏览器拦截了弹窗，请允许后重试','err');return}
+  const subs=[['提及率',h.subs.mention],['引用份额',h.subs.cite],['阵地覆盖',h.subs.channel],['内容承接',h.subs.content],['事实一致性',h.subs.fact]];
+  const open=(D.tasks||[]).filter(t=>t.status!=='done'&&t.priority==='P0');
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>${esc(D.brand.name)} · GEO 一页结论</title>
+  <style>body{font:15px/1.7 Inter,system-ui,sans-serif;max-width:720px;margin:40px auto;padding:0 24px;color:#111}
+  h1{font-size:24px}h2{font-size:16px;margin-top:28px}table{border-collapse:collapse;width:100%}
+  td,th{border-bottom:1px solid #ddd;padding:8px;text-align:left;font-size:14px}
+  .big{font-size:44px;font-weight:600}.muted{color:#777;font-size:12.5px}</style>
+  <h1>${esc(D.brand.name)} · GEO 一页结论</h1>
+  <div class="muted">数据截至 ${esc(a.latest_date||'—')} · 所有数字来自同一份问题库采样</div>
+  <div class="big">${h.score==null?'—':h.score}<span style="font-size:16px;color:#777"> / 100 GEO 健康分</span></div>
+  <h2>五项分项</h2><table>${subs.map(([n,v])=>`<tr><td>${n}</td><td>${v==null?'未测':(v*100).toFixed(1)+'%'}</td></tr>`).join('')}</table></div>
+  <h2>本期结论</h2><p>${esc(headline()[1])}</p>
+  <h2>下一步（P0）</h2><ul>${open.map(t=>`<li>${esc(t.title)} — ${esc(t.owner)}，${esc(t.effort)}</li>`).join('')||'<li>无 P0 阻塞</li>'}</ul>
+  <p class="muted">GEO 提升的是被引用的概率，不承诺任何引擎一定引用某个页面。</p>`);
+  w.document.close();
+}
+async function editSheet(name){
+  const r=await fetch(`/files/${SLUG}/samples/${encodeURIComponent(name)}`);
+  if(!r.ok){toast('采样表不存在','err');return}
+  const text=await r.text();
+  modal(`<h4 style="font-size:17px">${esc(name)}</h4>
+    <p class="muted" style="font-size:12px">把答案粘进 \`\`\`answer 块；留空的题会被跳过，不会算成「未提及」。</p>
+    <textarea id="sheet" class="input" rows="18">${esc(text)}</textarea>
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="importSheet(${esc(JSON.stringify(name))})">保存并导入</button></div>`);
+}
+async function importSheet(name){
+  const r=await post('/api/sample-import',{slug:SLUG,file:name,text:$('#sheet').value});
+  toast(r.ok?'已导入':'失败：'+(r.error||''),r.ok?'':'err');
+  if(r.ok){closeModal();load(SLUG,true)}
+}
+
+/* ===================== 设置 ===================== */
+let KEYS=null,PROJECTS=null,SET_CFG=null,PUB=null,SET_HTML='';
+async function vSettings(){
+  if(!KEYS)KEYS=await api('/api/keys');
+  if(!Array.isArray(KEYS))KEYS=[];
+  if(!PROJECTS)PROJECTS=await api('/api/projects');
+  if(!Array.isArray(PROJECTS))PROJECTS=[];
+  if(!SET_CFG)SET_CFG=await api('/api/config/'+SLUG);
+  if(!PUB)PUB=await api('/api/publish/'+SLUG);
+  const mon=(SET_CFG&&SET_CFG.monitor)||{},monCur=mon.every_days||0;
+  setTimeout(()=>{if(LASTJOB&&!RUNNING)showLog(LASTJOB)},0);
+  const acts=['crawl','audit','bootstrap','sample','sample-sheet','plan','blueprint','generate','lint','report','deliverables','verify','deliver'];
+  return `<div style="padding:32px 44px 72px;max-width:1180px">
+    ${head('设置','所有配置在一处，按「改了会影响什么」分组','采样与运行是设置而不是日常导航——日常你只需要看四段主线。')}
+
+    <h4 style="font-size:16px;margin:28px 0 10px">品牌与项目</h4>
+    <div class="tbl"><table class="table"><thead><tr><th>品牌</th><th style="width:210px">域名</th><th style="width:110px">站点体检均分</th><th style="width:90px">任务</th><th style="width:80px"></th></tr></thead><tbody>
+      ${(PROJECTS||[]).map(p=>`<tr>
+        <td><span style="font-size:13.5px">${esc(p.name)}</span>${p.slug===SLUG?' <span class="tag tag-accent">当前</span>':''}</td>
+        <td style="font-size:12.5px;color:var(--t500)">${esc((p.site||'').replace('https://',''))}</td>
+        <td style="font-size:13px">${p.avg_score==null?'—':p.avg_score}</td>
+        <td style="font-size:12.5px;color:var(--t400)">${p.tasks_total||'—'}</td>
+        <td><button class="btn btn-ghost" style="font-size:12px" onclick="switchProject(${esc(JSON.stringify(p.slug))})">${p.slug===SLUG?'刷新':'进入'}</button></td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn btn-primary" onclick="go('onboard',{obStep:1})">+ 接入新品牌</button>
+      <button class="btn btn-secondary" onclick="editConfig()">编辑当前品牌配置</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:26px">
+      <div class="card elev" style="padding:18px;gap:10px">
+        <div><div style="font-size:15px;font-weight:500">引擎与密钥</div>
+          <div style="font-size:11.5px;color:var(--t600)">点「配置」填 Key 和模型，写入项目根目录 .env，立即生效。无 API 的引擎走人工采样表。</div></div>
+        ${(KEYS||[]).map((k,i)=>`<div class="row" style="padding:5px 0;box-shadow:inset 0 -1px 0 var(--line)">
+          <span class="dot" style="background:${k.ok===true?'var(--a400)':k.ok===false?'#595d6c':'#3f424d'}"></span>
+          <span style="flex:1;font-size:13px">${esc(k.label)}<span class="muted" style="font-size:11px;margin-left:6px">${mktLabel(k.market)}${k.search?' · 联网':''}</span></span>
+          ${k.env?`<span style="font-size:11.5px;color:var(--t600)">${k.ok===true?'已配置'+(k.key_tail?' ····'+esc(k.key_tail):''):esc(k.env)}</span>
+            <button class="btn btn-ghost" style="font-size:12px;padding:2px 8px" onclick="editKey(${i})">${k.ok===true?'修改':'配置'}</button>`
+          :`<span style="font-size:11.5px;color:var(--t600)">人工采样</span>`}</div>`).join('')}
+      </div>
+      <div class="card elev" style="padding:18px;gap:10px">
+        <div><div style="font-size:15px;font-weight:500">运行任务</div>
+          <div style="font-size:11.5px;color:var(--t600)">后台子进程执行，关掉页面也会跑完。同一项目同时只跑一个。</div></div>
+        <div class="row" style="gap:6px">
+          <button class="btn btn-primary" style="font-size:12.5px" ${RUNNING?'disabled':''} onclick="runAction('autopilot')">✦ 全自动引导</button>
+          <button class="btn btn-primary" style="font-size:12.5px" ${RUNNING?'disabled':''} onclick="runAction('serve')">▶ 跑完整一期</button>
+        </div>
+        <div class="row" style="gap:6px">
+          ${acts.map(x=>`<button class="btn btn-secondary" style="font-size:11.5px;padding:4px 9px" ${RUNNING?'disabled':''}
+            onclick="runAction('${x}')">${esc((ACTIONS[x]||{}).label||x)}</button>`).join('')}
+        </div>
+        <div class="row" style="gap:6px;align-items:center;padding-top:4px;box-shadow:inset 0 1px 0 var(--line)">
+          <span style="font-size:12px;color:var(--t500)">周期复跑</span>
+          ${[0,7,14,30].map(dd=>`<button class="btn ${monCur===dd?'btn-secondary':'btn-ghost'}" style="font-size:11.5px;padding:3px 9px" onclick="setMonitor(${dd})">${dd?('每 '+dd+' 天'):'关'}</button>`).join('')}
+          ${monCur?`<span class="muted" style="font-size:11.5px">下次 ${esc(mon.next_run||'')} · 到期后看板运行时自动跑完整一期</span>`:''}
+        </div>
+        <div class="row"><div id="jobstat" style="font-size:12.5px;flex:1"></div>
+          ${RUNNING?`<button class="btn btn-secondary" style="font-size:12px" onclick="stopJob()">停止任务</button>`:''}</div>
+        <pre class="log" id="joblog" style="max-height:260px"></pre>
+      </div>
+    </div>
+    <div class="card elev" style="padding:18px;gap:10px;margin-top:14px">
+      <div><div style="font-size:15px;font-weight:500">发布渠道</div>
+        <div style="font-size:11.5px;color:var(--t600)">把成稿从「内容工作台」发到你自己的渠道。凭证写 .env；<b>发布永远由你手动点击，没有自动发布</b>；公众号 / WordPress 只建草稿，在各自后台确认后才对外。</div></div>
+      ${((PUB&&PUB.publishers)||[]).map((x,i)=>`<div class="row" style="padding:6px 0;box-shadow:inset 0 -1px 0 var(--line)">
+        <span class="dot" style="background:${x.missing.length?'#595d6c':'var(--a400)'}"></span>
+        <span style="flex:1;font-size:13px">${esc(x.name)}<span class="muted" style="font-size:11px;margin-left:6px">${esc(x.note)}</span></span>
+        <span style="font-size:11.5px;color:var(--t600)">${x.missing.length?('缺 '+x.missing.map(esc).join('、')):'已就绪'}</span>
+        <button class="btn btn-ghost" style="font-size:12px;padding:2px 8px" onclick="editPub(${i})">配置</button></div>`).join('')}
+      ${(PUB&&(PUB.records||[]).length)?`<div style="font-size:12px;color:var(--t500);margin-top:4px">最近发布：
+        ${PUB.records.slice(-3).reverse().map(r=>`<div style="padding:2px 0;color:var(--t400)">${r.ok?'✓':'✗'} ${esc((r.at||'').slice(0,16).replace('T',' '))} ${esc(r.platform_name)} · ${esc(r.title)} ${r.url?`<a href="${esc(r.url)}" target="_blank" style="color:var(--a300)">链接</a>`:esc(r.note||r.error||'')}</div>`).join('')}</div>`:''}
+    </div>
+    <p class="muted" style="font-size:12px;margin-top:16px">团队与权限：单机自托管版，无账号体系；服务只绑定 127.0.0.1。多人使用需自行加反向代理与认证。</p>
+  </div>`;
+}
+function editPub(i){
+  const x=PUB.publishers[i];
+  modal(`<h4 style="font-size:17px">${esc(x.name)}</h4>
+    <p class="muted" style="font-size:12px;margin-top:4px">${esc(x.note)}</p>
+    ${x.env.map(e=>`<div class="field"><label>${esc(e)}${x.missing.includes(e)?'':'（已配置，留空保持不变）'}</label>
+      <input class="input pub-env" data-env="${esc(e)}" type="password" autocomplete="off" placeholder="${x.missing.includes(e)?'必填':'留空保持不变'}"></div>`).join('')}
+    ${x.cfg.map(c=>`<div class="field"><label>${esc(c.key)}</label>
+      <input class="input pub-cfg" data-key="${esc(c.key)}" value="${esc(c.value)}" placeholder="${esc(c.hint)}"></div>`).join('')}
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="savePub(${i})">保存</button></div>`);
+}
+async function savePub(i){
+  const x=PUB.publishers[i],u={};
+  document.querySelectorAll('.pub-env').forEach(el=>{const v=el.value.trim();if(v)u[el.dataset.env]=v});
+  if(Object.keys(u).length){
+    const r=await post('/api/keys',{updates:u});
+    if(!r.ok){toast('凭证保存失败：'+(r.error||''),'err');return}
+  }
+  if(x.cfg.length){
+    const cfg={};document.querySelectorAll('.pub-cfg').forEach(el=>cfg[el.dataset.key]=el.value.trim());
+    const r=await post('/api/publishcfg/'+SLUG,{platform:x.code,cfg});
+    if(!r.ok){toast('配置保存失败：'+(r.error||''),'err');return}
+  }
+  toast('已保存');closeModal();PUB=null;KEYS=null;render();
+}
+async function stopJob(){if(RUNNING){await post(`/api/job/${RUNNING}/stop`,{});toast('已发送停止信号')}}
+async function showLog(id){
+  const r=await api(`/api/job/${id}?offset=0`);const pre=$('#joblog'),st=$('#jobstat');
+  if(pre&&!r.error){pre.textContent=r.log||'';pre.scrollTop=pre.scrollHeight;
+    if(st)st.innerHTML=`${r.job.status==='done'?'✓':'✗'} ${esc(r.job.label)} ${({done:'完成',failed:'失败',stopped:'已停止',interrupted:'已中断'})[r.job.status]||r.job.status}`}
+}
+async function setMonitor(days){
+  const next=days?new Date(Date.now()+days*864e5).toISOString().slice(0,10):null;
+  const r=await post('/api/config/'+SLUG,{monitor:days?{every_days:days,next_run:next}:{}});
+  toast(r.ok?(days?`已开启：每 ${days} 天自动跑完整一期，首次 ${next}`:'已关闭周期复跑'):'失败：'+(r.error||''),r.ok?'':'err');
+  if(r.ok){SET_CFG=null;render()}
+}
+async function switchModal(){
+  const ps=await api('/api/projects');
+  if(!Array.isArray(ps)||!ps.length){go('onboard',{obStep:1});return}
+  modal(`<h4 style="font-size:17px">切换品牌</h4>
+    <div style="margin-top:8px">
+    ${ps.map(p=>`<div class="row" style="gap:10px;padding:10px 8px;cursor:pointer;border-radius:var(--r-md);box-shadow:inset 0 -1px 0 var(--line)"
+        onmouseover="this.style.background='var(--deep)'" onmouseout="this.style.background=''"
+        onclick="closeModal();${p.slug===SLUG?'':'switchProject('+esc(JSON.stringify(p.slug))+')'}">
+      <span style="flex:1;font-size:13.5px">${esc(p.name)}${p.slug===SLUG?' <span class="tag tag-accent" style="font-size:10px">当前</span>':''}</span>
+      <span class="muted" style="font-size:11.5px">${esc((p.site||'').replace(/^https?:\/\//,''))}</span>
+      <span class="muted" style="font-size:11.5px;width:70px;text-align:right">体检 ${p.avg_score==null?'—':p.avg_score}</span>
+    </div>`).join('')}
+    </div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-secondary" onclick="closeModal();go('onboard',{obStep:1})">+ 接入新品牌</button>
+      <button class="btn btn-primary" onclick="closeModal()">关闭</button></div>`);
+}
+async function switchProject(slug){KEYS=null;PROJECTS=null;SET_CFG=null;PUB=null;AS={tree:null,cur:null,text:''};
+  WB={qid:null,sources:[],cur:null,text:'',check:null,q:null};ST.engSel=null;
+  await load(slug);go('overview')}
+async function editConfig(){
+  const cfg=await api('/api/config/'+SLUG);const b=cfg.brand||{};
+  modal(`<h4 style="font-size:17px">品牌配置</h4>
+    <div class="field"><label>品牌名</label><input id="c-name" class="input" value="${esc(b.name||'')}"></div>
+    <div class="field"><label>别名（顿号分隔——漏别名会低估提及率）</label><input id="c-alias" class="input" value="${esc((b.aliases||[]).join('、'))}"></div>
+    <div class="field"><label>竞品（顿号分隔——它是排名指标的分母）</label><input id="c-comp" class="input" value="${esc((cfg.competitors||[]).map(c=>c.name).join('、'))}"></div>
+    <div class="field"><label>市场</label><div class="seg">
+      ${['cn','global','both'].map(m=>`<label class="seg-opt"><input type="radio" name="cmkt" value="${m}" ${cfg.market===m?'checked':''}>${({cn:'国内',global:'海外',both:'两者都要'})[m]}</label>`).join('')}</div></div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveCfg()">保存</button></div>`);
+}
+async function saveCfg(){
+  const cfg=await api('/api/config/'+SLUG);
+  const sp=v=>v.split(/[、,，]/).map(s=>s.trim()).filter(Boolean);
+  cfg.brand.name=$('#c-name').value.trim();
+  cfg.brand.aliases=sp($('#c-alias').value);
+  const old={};(cfg.competitors||[]).forEach(c=>old[c.name]=c);
+  cfg.competitors=sp($('#c-comp').value).map(n=>old[n]||{name:n,aliases:[],market:cfg.market==='global'?'global':'cn'});
+  cfg.market=document.querySelector('input[name=cmkt]:checked').value;
+  if(cfg.bootstrap)cfg.bootstrap.needs_review=false;
+  const r=await post('/api/config/'+SLUG,cfg);
+  toast(r.ok?'已保存':'失败',r.ok?'':'err');if(r.ok){closeModal();load(SLUG,true)}
+}
+function editKey(i){
+  const k=KEYS[i];
+  modal(`<h4 style="font-size:17px">${esc(k.label)}</h4>
+    ${k.note?`<p class="muted" style="font-size:12px;margin:4px 0 0">${esc(k.note)}</p>`:''}
+    <div class="field"><label>API Key（${esc(k.env)}${k.ok===true?'，已配置'+(k.key_tail?'，尾号 '+k.key_tail:''):''}）</label>
+      <input id="k-key" class="input" type="password" autocomplete="off"
+        placeholder="${k.ok===true?'留空则保持现有 Key 不变':'粘贴 API Key'}"></div>
+    ${k.model_env?`<div class="field"><label>模型（${esc(k.model_env)}，留空用默认）</label>
+      <input id="k-model" class="input" value="${k.model_set?esc(k.model):''}" placeholder="${esc(k.model)}"></div>`:''}
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      ${k.ok===true?`<button class="btn btn-ghost" style="margin-right:auto" onclick="if(confirm('确定从 .env 删除 ${esc(k.env)}？'))saveKey(${i},true)">清除 Key</button>`:''}
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveKey(${i})">保存</button></div>`);
+}
+async function saveKey(i,clear){
+  const k=KEYS[i],u={};
+  if(clear)u[k.env]='';
+  else{const v=$('#k-key').value.trim();if(v)u[k.env]=v}
+  if(k.model_env&&!clear){
+    const m=$('#k-model').value.trim();
+    if(m!==(k.model_set?k.model:''))u[k.model_env]=m;
+  }
+  if(!Object.keys(u).length){closeModal();return}
+  const r=await post('/api/keys',{updates:u});
+  toast(r.ok?'已写入 .env':'失败：'+(r.error||''),r.ok?'':'err');
+  if(r.ok){closeModal();KEYS=null;render()}
+}
+
+/* ===================== 接入引导 ===================== */
+function vOnboard(){
+  const s=ST.obStep;
+  const bars=[1,2,3].map(i=>`<span style="flex:1;height:3px;border-radius:2px;background:${s>=i?'var(--accent)':'#3f424d'}"></span>`).join('');
+  let body='';
+  if(s===1){
+    body=`<div style="display:flex;flex-direction:column;gap:14px">
+      <div class="field"><label>官网域名 *</label><input id="ob-url" class="input" placeholder="https://example.com" value="${esc(ST.obUrl||'')}"></div>
+      <div class="field"><label>品牌名称（留空自动从网页识别）</label><input id="ob-name" class="input" value="${esc(ST.obName||'')}"></div>
+      <div class="field"><label>目标市场</label><div class="seg">
+        ${[['cn','国内引擎'],['global','海外引擎'],['both','两者都要']].map(([m,l])=>`<label class="seg-opt"><input type="radio" name="obm" value="${m}" ${(ST.obMkt||'both')===m?'checked':''}>${l}</label>`).join('')}</div></div>
+      <label class="row" style="gap:6px;font-size:13px"><input type="checkbox" id="ob-nosample" style="width:auto" ${ST.obNoSample?'checked':''}> 首期跳过采样（省时间，可稍后补）</label>
+      <div class="row" style="margin-top:10px">
+        <button class="btn btn-primary" onclick="obCreate()">创建并开始自动引导</button>
+        <button class="btn btn-ghost" onclick="go('settings')">返回设置</button></div>
+    </div>`;
+  }else if(s===2){
+    if(ST.obFail)setTimeout(()=>{if(LASTJOB&&!RUNNING)showLog(LASTJOB)},0);
+    body=`<div style="display:flex;flex-direction:column;gap:10px">
+      <div id="jobstat" style="font-size:13px">${ST.obFail?'✗ 首期任务未完成（失败、被停止或中断）。日志见下，可重试。':'<span class="spin"></span>正在抓取官网、推导品牌事实 / 竞品 / 问题库、采样并生成交付物…'}</div>
+      <pre class="log" id="joblog"></pre>
+      ${ST.obFail
+        ?`<div class="row"><button class="btn btn-primary" onclick="obRetry()">重试</button>
+            <button class="btn btn-ghost" onclick="go('settings')">去设置手动跑</button></div>`
+        :`<div class="muted" style="font-size:12px">自动推导只从官网正文抽取，抽不到的标「待确认」，不用常识填充——跑完后到「问题库」「品牌事实库」人工核对。不用等在这个页面。</div>`}
+    </div>`;
+  }else{
+    body=`<div style="display:flex;flex-direction:column;gap:12px">
+      <div style="font-size:14px">✓ 首期已完成。三份交付物已生成，指标已可用。</div>
+      <div class="muted" style="font-size:12.5px">下一步：核对「品牌事实库」里标「待确认」的条目，过一遍「问题库」的问法，然后按「行动计划」推进。</div>
+      <div class="row"><button class="btn btn-primary" onclick="go('overview')">进入总览 →</button>
+        <button class="btn btn-secondary" onclick="go('facts')">先核对事实库</button></div>
+    </div>`;
+  }
+  return `<div style="padding:44px;display:flex;justify-content:center"><div style="width:100%;max-width:720px">
+    <div class="kicker">接入引导 · 第 ${s} / 3 步</div>
+    <h3>${['','你是谁，做什么','正在生成首份诊断','完成'][s]}</h3>
+    <p class="soft" style="font-size:13.5px">${['','只要域名。竞品与问题库将从官网内容自动推导，之后随时可改。','首次全流程视采样规模约 10–30 分钟。','底座就绪。'][s]}</p>
+    <div style="display:flex;gap:6px;margin:20px 0 26px">${bars}</div>
+    ${body}
+  </div></div>`;
+}
+async function obCreate(){
+  const url=$('#ob-url').value.trim();
+  if(!url){toast('请填写官网地址','err');return}
+  ST.obUrl=url;ST.obName=$('#ob-name').value.trim();
+  ST.obMkt=document.querySelector('input[name=obm]:checked').value;
+  ST.obNoSample=$('#ob-nosample').checked;
+  const r=await post('/api/init',{url,name:ST.obName,
+    market:ST.obMkt,max_pages:25});
+  if(!r.ok){toast(r.error||'创建失败','err');return}
+  ST.obSlug=r.slug;KEYS=null;PROJECTS=null;
+  await load(r.slug,true);
+  ST.obStep=2;ST.obFail=false;R='onboard';render();
+  const p=ST.obNoSample?{'--no-sample':true}:{};
+  const job=await runAction('autopilot',p);
+  if(!job){ST.obStep=1;render();return}
+}
+async function obRetry(){
+  ST.obFail=false;render();
+  const p=ST.obNoSample?{'--no-sample':true}:{};
+  const job=await runAction('autopilot',p);
+  if(!job){ST.obFail=true;render()}
+}
+
+/* ===================== 站点体检 ===================== */
+function vSiteAudit(){
+  const A=D.audit||{},site=A.site||{},lc=A.language_coverage||{},gd=A.grade_distribution||{};
+  const pages=A.pages||[];
+  if(!A.page_count)return `<div style="padding:32px 44px">${head('诊断 · 站点体检','还没有体检数据','到「设置 → 运行任务」跑「抓取站点」+「页面体检」。')}</div>`;
+  const flags=[
+    ['robots 封禁 AI 抓取器',(site.ai_bots_blocked||[]).length?('封禁 '+site.ai_bots_blocked.join('、')):'未封禁',!(site.ai_bots_blocked||[]).length,'查看 robots.txt ↗'],
+    ['sitemap.xml',site.has_sitemap?('有 · '+(site.sitemap_url_count||0)+' 条 URL'):'缺失',!!site.has_sitemap,'查看 sitemap.xml ↗'],
+    ['llms.txt',site.has_llms_txt?'已上线':'缺失',!!site.has_llms_txt,'到部署资产查看 →'],
+    ['页面可访问',(site.pages_ok||0)+' / '+(site.pages_crawled||0),(site.pages_ok||0)===(site.pages_crawled||0),'定位问题页 ↓'],
+    ['语言覆盖','中文 '+(lc.zh_pages||0)+' 页 · 英文 '+(lc.en_pages||0)+' 页',(D.market!=='both')||((lc.en_pages||0)>0&&(lc.zh_pages||0)>0),'相关工单 →'],
+  ];
+  const gain={'数字事实':'+61.6%','定义':'+57.3%','对比':'+55.3%','操作步骤':'+41.2%','FAQ':'利于召回'};
+  const gnote={A:'可直接被引用',B:'基本可用',C:'需要改造',D:'等于不存在'};
+  const gmax=Math.max(1,...['A','B','C','D'].map(g=>gd[g]||0));
+  // 联动筛选：点等级/抽取块 → 下方页面列表过滤（数据范围=服务端返回的分数最低 40 页）
+  const gradeOf=s=>s>=80?'A':s>=65?'B':s>=45?'C':'D';
+  const ag=ST.agrade||null,ab=ST.ablk||null;
+  let plist=pages;
+  if(ag)plist=plist.filter(p=>gradeOf(p.score)===ag);
+  if(ab)plist=plist.filter(p=>!(p.blocks||{})[ab]);
+  const blkTask=b=>(D.tasks||[]).find(t=>((t.acceptance||{}).check||'')==='pages.block:'+b);
+  return `<div style="padding:32px 44px 72px;max-width:1280px">
+    ${head('诊断 · 站点体检','内容层的问题在差距诊断，这里是技术层','能不能被抓到、结构好不好。六维口径：可抓取 / 长度 / 结构 / 抽取块 / 权威 / 对题，判据全部来自公开实证数据。')}
+    <div class="kpis">
+      ${flags.map(([l,v,ok,hint],i)=>`<div class="card elev" style="gap:4px;padding:15px;cursor:pointer" onclick="auditFlag(${i})" title="${esc(hint)}">
+        <div style="font-size:11.5px;color:var(--t500)">${l}</div>
+        <div style="font-size:15px;font-weight:500;color:${ok?'var(--text)':'var(--a300)'}">${esc(v)}</div>
+        <div style="display:flex;justify-content:space-between;font-size:11px">
+          <span style="color:${ok?'var(--t600)':'var(--accent)'}">${ok?'正常':'需处理'}</span>
+          <span style="color:var(--a300)">${esc(hint)}</span></div></div>`).join('')}
+    </div>
+    ${(A.site_issues||[]).length?`<div class="card" style="margin-top:14px;box-shadow:0 0 0 1px var(--a700);padding:14px 16px;gap:5px">
+      ${A.site_issues.map(i=>`<div style="font-size:13px;color:var(--t400)">· ${esc(i)}</div>`).join('')}</div>`:''}
+
+    <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:14px;margin-top:14px">
+      <div class="card elev" style="padding:18px">
+        <div style="font-size:15px;font-weight:500">页面等级分布 · 均分 ${A.avg_score??'—'}</div>
+        <div style="font-size:11.5px;color:var(--t600);margin-bottom:10px">70 分以上算「基本可用」。</div>
+        ${['A','B','C','D'].map(g=>`<div style="display:flex;align-items:center;gap:10px;padding:5px 0;cursor:pointer;border-radius:6px;${ag===g?'background:var(--deep)':''}"
+          title="点击筛选下方页面列表" onclick="ST.agrade=ST.agrade==='${g}'?null:'${g}';render()">
+          <span style="width:110px;font-size:12.5px;flex:none;${ag===g?'color:var(--a300)':''}">${g} · ${gnote[g]}</span>
+          <span class="bar" style="flex:1"><span style="width:${((gd[g]||0)/gmax*100).toFixed(0)}%"></span></span>
+          <span style="width:30px;text-align:right;font-size:12px;color:var(--t400)">${gd[g]||0}</span></div>`).join('')}
+        <div class="muted" style="font-size:11px;margin-top:6px">点击等级 → 下方列表只看该等级的页面</div>
+      </div>
+      <div class="card elev" style="padding:18px">
+        <div style="font-size:15px;font-weight:500">全站抽取块缺口</div>
+        <div style="font-size:11.5px;color:var(--t600);margin-bottom:8px">GEO 最大的单项杠杆，右列是实测的被引用概率增益。</div>
+        <div class="tbl"><table class="table"><thead><tr><th>抽取块</th><th style="width:100px">缺失页数</th><th style="width:90px">实测增益</th><th style="width:110px">工单</th></tr></thead><tbody>
+          ${(A.block_gap||[]).map(g=>{const t=blkTask(g.block);
+            return `<tr style="cursor:pointer;${ab===g.block?'background:var(--deep)':''}" title="点击筛选下方缺这个块的页面"
+              onclick="ST.ablk=ST.ablk===${esc(JSON.stringify(g.block))}?null:${esc(JSON.stringify(g.block))};render()">
+            <td style="font-size:13.5px;${ab===g.block?'color:var(--a300)':''}">${esc(g.block)}</td>
+            <td style="font-size:13px;color:var(--t400)">${g.missing_pages} / ${g.total}</td>
+            <td style="font-size:13px;color:var(--a300)">${gain[g.block]||'—'}</td>
+            <td>${t?`<span class="tag tag-outline" style="cursor:pointer;font-size:11px" title="打开工单详情"
+              onclick="event.stopPropagation();taskModal(${esc(JSON.stringify(t.id))})">${esc(t.id)} →</span>`:'<span class="muted" style="font-size:11px">—</span>'}</td></tr>`}).join('')}
+        </tbody></table></div>
+        <div class="muted" style="font-size:11px;margin-top:6px">点击行 → 下方列表只看缺该块的页面；点工单号看怎么修。</div>
+      </div>
+    </div>
+
+    <div class="row" id="audit-pages" style="margin:26px 0 8px">
+      <h4 style="font-size:16px;margin:0">最需要改造的页面（分数从低到高）</h4>
+      ${(ag||ab)?`<span class="tag tag-accent">${ag?('等级 '+ag):''}${ag&&ab?' + ':''}${ab?('缺「'+ab+'」'):''} · ${plist.length} 页</span>
+        <button class="btn btn-ghost" style="font-size:11.5px" onclick="ST.agrade=null;ST.ablk=null;render()">清除筛选</button>`:''}
+    </div>
+    <div class="tbl"><table class="table"><thead><tr><th style="width:70px">分数</th><th style="width:70px">词数</th><th style="width:280px">缺失抽取块</th><th>页面</th></tr></thead><tbody>
+      ${plist.slice(0,(ag||ab)?40:12).map(pg=>`<tr>
+        <td style="font-size:13px;color:${pg.score<45?'var(--a300)':'var(--t400)'}">${pg.score}</td>
+        <td style="font-size:13px;color:var(--t400)">${pg.word_count}</td>
+        <td style="font-size:12.5px;color:var(--t500)">${esc(Object.keys(pg.blocks||{}).filter(k=>!pg.blocks[k]).join('、')||'—')}</td>
+        <td style="font-size:12.5px"><a href="${esc(pg.url)}" target="_blank" rel="noopener">${esc((pg.title||pg.url).slice(0,60))}</a></td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="muted" style="font-size:12px;margin-top:10px">词数接近 0 的是前端渲染空壳页——AI 抓取器看到的是空白，这是国内官网最常见的致命伤。修复清单见「行动计划」。</p>
+  </div>`;
+}
+
+function auditFlag(i){
+  // 站点体检顶部卡片的联动：robots/sitemap 直接看源文件，llms.txt 去部署资产，
+  // 页面可访问定位到问题页列表，语言覆盖跳相关工单
+  const site=(D.brand.site||'').replace(/\/$/,'');
+  if(i===0&&site)window.open(site+'/robots.txt','_blank');
+  else if(i===1&&site)window.open(site+'/sitemap.xml','_blank');
+  else if(i===2)go('assets',{assetSel:'llms.txt'});
+  else if(i===3){const el=document.querySelector('#audit-pages');if(el)el.scrollIntoView({block:'start'})}
+  else if(i===4){
+    const t=(D.tasks||[]).find(x=>/^site\.(en_pages_gte|lang_balance)/.test((x.acceptance||{}).check||''));
+    if(t)taskModal(t.id);else go('plan');
+  }
+}
+
+/* ===================== 部署资产 ===================== */
+let AS={tree:null,cur:null,text:''};
+const AS_DEST={
+  '根目录':['① 上传到网站根目录','传上去后能通过 你的域名/llms.txt 直接访问；不要放进 /static/'],
+  'jsonld':['② 贴进页面 <head>','不是上传 json 文件——把内容包进 <script type="application/ld+json"> 放进对应页面'],
+  'snippets':['③ 贴进页面模板','定义块放首屏口号下方；FAQ 块的答案必须在静态 HTML 里可见'],
+  'outlines':['④ 不上传 · 给内容团队','写作大纲——在「内容工作台」按骨架写'],
+  'drafts':['⑤ 不上传 · 需先核实','AI 初稿，必须过风险检查并人工核实后才能发布'],
+  'internal':['说明与索引 · 不上传','DEPLOY.md 是给开发的部署清单（含每步验收标准）'],
+};
+async function vAssets(){
+  if(!AS.tree){const t=await api('/api/assets/'+SLUG);AS.tree=Array.isArray(t)?t:[]}
+  if(ST.assetSel){const p=ST.assetSel;ST.assetSel=null; // 从站点体检等处跳来：直接打开指定文件
+    if(AS.tree.some(a=>a.path===p))setTimeout(()=>asOpen(p),80)}
+  const INT={'DEPLOY.md':1,'index.json':1,'_lint.json':1};
+  const groups={};AS.tree.forEach(a=>{const fn=a.path.split('/').pop();
+    (groups[INT[fn]?'internal':a.group]=groups[INT[fn]?'internal':a.group]||[]).push(a)});
+  const order=['根目录','jsonld','snippets','internal','outlines','drafts'];
+  return `<div style="padding:32px 44px 72px;max-width:1280px">
+    ${head('提升 · 部署资产','系统生成的可部署产物','只有 llms.txt 是真的上传到网站根目录；JSON-LD 贴进 head，HTML 片段贴进模板，大纲和初稿不上网站。完整步骤与验收标准见 DEPLOY.md。')}
+    ${D.lint&&D.lint.total?`<div class="card" style="margin:16px 0 0;box-shadow:0 0 0 1px var(--a700);padding:12px 16px">
+      <div style="font-size:13px;color:var(--t400)">AI 初稿风险检查：<b>${D.lint.total}</b> 项待人工核实（高风险 ${D.lint.high}）。核实前不得发布——明细见 drafts/_lint.json。</div></div>`:''}
+    <div style="display:grid;grid-template-columns:300px 1fr;gap:16px;margin-top:18px;align-items:start">
+      <div class="card elev" style="padding:12px;max-height:560px;overflow:auto">
+        ${AS.tree.length?order.filter(g=>groups[g]).map(g=>`
+          <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--t600);margin:10px 4px 4px;display:flex;justify-content:space-between">
+            <span>${g==='根目录'?'llms.txt':g}</span><span style="color:var(--accent);text-transform:none;letter-spacing:0">${esc((AS_DEST[g]||[''])[0].replace(/^[①②③④⑤]\s*/,''))}</span></div>
+          ${groups[g].map(a=>`<button class="navit ${AS.cur===a.path?'on':''}" style="font-size:12.5px" onclick="asOpen(${esc(JSON.stringify(a.path))})">
+            <span class="mark"></span><span style="flex:1;text-align:left">${esc(a.path.split('/').pop())}</span>
+            <span class="bdg">${(a.size/1024).toFixed(1)}k</span></button>`).join('')}`).join('')
+          :'<div class="muted" style="font-size:12.5px;padding:8px">还没有资产——到「设置」跑「生成资产」</div>'}
+      </div>
+      <div id="asview" class="card elev" style="padding:16px;min-height:300px">
+        ${AS.cur?'':'<div class="muted" style="font-size:13px">选一个文件查看。每个文件顶部会说明它的去处。</div>'}
+      </div>
+    </div>
+  </div>`;
+}
+async function asOpen(path){
+  AS.cur=path;
+  const r=await api(`/api/asset/${SLUG}?path=${encodeURIComponent(path)}`);
+  AS.text=r.text||'';
+  await render();
+  const grp=path.indexOf('/')>=0?path.split('/')[0]:'根目录';
+  const fn=path.split('/').pop();
+  const INT={'DEPLOY.md':1,'index.json':1,'_lint.json':1};
+  const d=AS_DEST[INT[fn]?'internal':grp]||['',''];
+  $('#asview').innerHTML=`
+    <div class="card" style="padding:11px 14px;box-shadow:0 0 0 1px var(--a700);margin-bottom:12px;gap:3px">
+      <div style="font-size:12.5px;font-weight:500">${esc(d[0])}</div>
+      <div style="font-size:11.5px;color:var(--t500)">${esc(d[1])}</div></div>
+    <div class="row" style="margin-bottom:8px"><b style="font-size:13px">${esc(path)}</b><span style="flex:1"></span>
+      <button class="btn btn-ghost" style="font-size:12px" onclick="navigator.clipboard.writeText(AS.text);toast('已复制')">复制</button>
+      <button class="btn btn-primary" style="font-size:12px" onclick="asSave()">保存修改</button></div>
+    <textarea class="input" id="astext" rows="20" oninput="AS.text=this.value">${esc(AS.text)}</textarea>`;
+}
+async function asSave(){
+  const r=await post('/api/asset/'+SLUG,{path:AS.cur,text:AS.text});
+  toast(r.ok?'已保存':'失败：'+(r.error||''),r.ok?'':'err');
+}
+
+/* ===================== 框架 ===================== */
+const VIEWS={overview:vOverview,engines:vEngines,competitors:vCompetitors,questions:vQuestions,
+  siteaudit:vSiteAudit,assets:vAssets,
+  gaps:vGaps,channels:vChannels,facts:vFacts,plan:vPlan,workbench:vWorkbench,
+  verify:vVerify,report:vReport,settings:vSettings,onboard:vOnboard};
+async function render(){
+  renderSide();
+  const fn=VIEWS[R]||vOverview;
+  const out=fn();
+  $('#view').innerHTML=(out instanceof Promise)?await out:out;
+  if((R==='settings'||R==='onboard')&&RUNNING)pollJob();
+}
+function normAnalytics(a){
+  a=(a&&!a.error)?a:{};
+  const h=a.health=a.health||{};
+  h.subs=h.subs||{};h.measured=h.measured||[];
+  a.trend=a.trend||[];a.engines=a.engines||[];a.questions=a.questions||[];
+  a.competitors=a.competitors||{};a.q_delta=a.q_delta||[];a.factcheck=a.factcheck||[];
+  return a;
+}
+async function load(slug,keep){
+  SLUG=slug;
+  D=await api('/api/p/'+encodeURIComponent(slug));
+  const aerr=D.error||(D.analytics&&D.analytics.error);
+  D.brand=D.brand||{};D.tasks=D.tasks||[];
+  D.analytics=normAnalytics(D.analytics);
+  if(aerr){
+    renderSide();
+    $('#view').innerHTML=`<div style="padding:44px;max-width:560px">
+      <h3 style="margin-bottom:10px">数据加载失败</h3>
+      <p class="soft" style="font-size:13.5px">${esc(aerr)}</p>
+      <div class="row" style="margin-top:14px">
+        <button class="btn btn-primary" onclick="load(SLUG,true)">重试</button>
+        <button class="btn btn-secondary" onclick="go('settings')">去设置</button></div>
+    </div>`;
+    return}
+  const f=await api('/api/files/'+slug);D.samples_sheets=f.samples||[];D.deliveries=f.deliveries||[];D.reports=f.reports||[];
+  const jr=await api('/api/jobs?slug='+slug);RUNNING=jr.running||null;
+  AS.tree=null;   // 资产可能被任务更新过
+  const hh=(location.hash||'').replace('#','');  // 支持 #路由 深链直达
+  if(!keep)R=VIEWS[hh]?hh:((D.analytics&&D.analytics.latest_date)?'overview':'settings');
+  history.replaceState({r:R,engSel:ST.engSel,gapTab:ST.gapTab},'','#'+R);
+  render();
+}
+(async()=>{
+  ACTIONS=await api('/api/actions');
+  if(!ACTIONS||ACTIONS.error)ACTIONS={};
+  const ps=await api('/api/projects');
+  if(!Array.isArray(ps)){
+    D={brand:{},analytics:normAnalytics(null),tasks:[]};
+    renderSide();
+    $('#view').innerHTML=`<div style="padding:44px;max-width:560px">
+      <h3 style="margin-bottom:10px">无法连接服务</h3>
+      <p class="soft" style="font-size:13.5px">${esc((ps&&ps.error)||'连接失败：服务未响应')}</p>
+      <div class="row" style="margin-top:14px"><button class="btn btn-primary" onclick="location.reload()">重试</button></div>
+    </div>`;
+    return}
+  if(!ps.length){R='onboard';ST.obStep=1;
+    D={brand:{},analytics:normAnalytics(null),tasks:[]};
+    render();return}
+  load(ps[0].slug);
+})();
+</script>
+</body>
+</html>
