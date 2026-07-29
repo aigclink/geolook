@@ -8,134 +8,169 @@ For a specific project: status analysis → diagnosis → strategy → implement
 
 [简体中文](README.md) · English
 
-![License](https://img.shields.io/badge/license-MIT-9184d9) ![Python](https://img.shields.io/badge/python-3.9%2B-9184d9) ![Deps](https://img.shields.io/badge/deps-requests%20·%20bs4%20·%20lxml-9184d9)
+![License](https://img.shields.io/badge/license-MIT-9184d9) ![Python](https://img.shields.io/badge/python-3.9%2B-9184d9) ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-9184d9) ![Deps](https://img.shields.io/badge/deps-requests%20·%20bs4%20·%20lxml-9184d9)
+
+📹 [40-second demo](docs/demo.mp4) · 🖼 [All screenshots](docs/screenshots/)
 
 </div>
 
-> GEO = Generative Engine Optimization — getting AI engines (ChatGPT, Perplexity, Gemini, DeepSeek, Doubao…) to **proactively mention and cite your brand** when answering user questions. Not geographic info, not classic SEO.
+> GEO = Generative Engine Optimization: getting AI engines (ChatGPT, Perplexity, Gemini, DeepSeek, Doubao…) to **proactively mention and cite your brand** when answering user questions. Not geographic info, not classic SEO.
 
 ![Overview](docs/screenshots/overview.png)
 
-## What it does
+## 1. Problems it solves
 
-GeoLook is not yet another GEO monitoring dashboard — it delivers **end-to-end GEO implementation for a specific project**: starting from status analysis and diagnosis, producing an actionable strategy and implementation tickets, following through to execution with automatic verification, and packaging the results for delivery. Point it at a product website and it answers four questions:
+More and more users ask AI directly — "best tools for X", "X vs Y, which one". If your brand:
 
-| Stage | Question | Pages |
-|---|---|---|
-| **Status** | How do AI engines see you today | Overview / Engines / Competitors / Question bank |
-| **Diagnosis** | Why | Site audit / Gap diagnosis / Channel map / Brand facts |
-| **Action** | What to do | Action plan / Content workbench / Deploy assets |
-| **Results** | Did it work | Verification / Reports & delivery |
+| Problem | What GeoLook gives you |
+|---|---|
+| **AI never mentions you** — you're not in the candidate set for category questions | Samples real answers engine by engine; quantifies mention rate / rank / citation share; diagnoses "absent" vs "competitor-dominated" |
+| **You don't know why** — AI is a black box | 6-dimension site audit + gap diagnosis: uncrawlable pages? missing extraction blocks? absent from the channels AI actually cites? inconsistent messaging? |
+| **Advice never lands** — recommendations pile up, nobody executes or verifies | Generates implementation tickets with acceptance criteria; 86% auto-verifiable in the sample project (18/21) — "done" is measured, not claimed |
+| **Did the work even help?** | Per-question before/after across sampling rounds + task-level before/after |
+| **You deliver GEO as a service and packaging is painful** | One click produces diagnosis report, strategy, execution plan, ticket CSV, and acceptance sheet for clients |
 
-One command runs the whole pipeline:
+## 2. Feature map
 
-```bash
-python3 scripts/geo.py new --url https://example.com --market both
-```
+Four stages plus operations, all in one self-hosted dashboard:
 
-Nine automated steps: crawl the site → 6-dimension audit → derive brand facts / competitors / question bank from page copy → sample AI answers engine by engine → generate tickets with acceptance criteria → produce deployable assets (llms.txt / JSON-LD / definition blocks / FAQ / content drafts) → report → auto-verify → client delivery package.
-
-## Highlights
-
-### Dual-market engine observation
-
-CN and Global markets get separate question banks, separate sampling, separate metrics — Chinese questions never hit Perplexity, English ones never hit Doubao.
-
-| Market | Automated via API | Manual sampling sheet |
-|---|---|---|
-| CN | Zhipu GLM · Doubao (Ark) · DeepSeek · Kimi · MiniMax | Nano AI Search · Baidu AI · Doubao App |
-| Global | Gemini · OpenAI (ChatGPT) · Claude · Grok · Perplexity | ChatGPT web · Claude web |
+**Status** — Engine performance across 15 engines (10 automated via API + 5 manual sheets): mention rate, rank, citation share, what each engine actually cites, **sample replay** of raw answers, suspected-negative flags; **brand mention distribution** (you vs. competitors, per engine and aggregated); competitor tables with each rival's strongest engine one click away; a 7-category question bank where every question gets a **diagnosis type** (suspected-negative > competitor-dominated > absent > low-ranked).
 
 ![Engines](docs/screenshots/engines.png)
 
-### Reproducible metrics
-
-- **Mention rate**: share of unprompted samples where the AI brings your brand up on its own (brand-named questions are excluded — they'd be 100% false positives)
-- **Citation share** of your domains; **brand mention distribution** — you vs. competitors inside answers
-- **Per-question diagnosis**: suspected-negative > competitor-dominated > absent > low-ranked, fixed rules
-- **GEO health score**: mention×30 + citation×25 + channels×20 + content×15 + facts×10; unmeasured items are re-normalized, never faked
-- Every number links to a "where do these numbers come from" methodology panel, kept in sync with the code
-
-### Channel map: where to build, what, how much
-
-19 channels weighted by real citation-corpus data (citation volume / average position / platform coverage), tiered P0/P1/P2. Each channel declares which content categories it carries, two-way linked with the workbench — finish a piece, the distribution checklist shows where it should go; check it off, and the next sampling round verifies whether the channel actually gets cited.
+**Diagnosis** — Site audit (robots / sitemap / llms.txt / accessibility / language coverage / extraction blocks, with click-through filtering straight to the fixing ticket); gap diagnosis (content → channels → facts); a **channel map of 19 channels** weighted by real citation-corpus data, each specifying what to build, how much, at what cadence, by whom; a **brand facts library** as the single source of truth that llms.txt, JSON-LD and content drafts are generated from.
 
 ![Channel map](docs/screenshots/channels.png)
 
-### Auto-verified tickets with before/after
-
-Every ticket carries acceptance criteria. "Auto" tickets are judged by re-crawling and the next sampling round — done means measured, not claimed. Quantified tickets show a "first-measured → current → target" progress bar; regressions reopen automatically.
+**Action** — Structured tickets (rationale / owner / effort / window / acceptance criteria) with "first-measured → current → target" progress bars and automatic reopening on regressions; a **content workbench** (topic pool sorted by "not mentioned + no content", required extraction blocks and brand facts at hand, live citability pre-check, fabrication-risk lint for AI drafts, and a **distribution checklist** matching each piece to its target channels); **deploy assets** (llms.txt, JSON-LD, HTML snippets, each labeled with its destination, plus a DEPLOY.md runbook); **publishing** to GitHub / WordPress drafts / WeChat OA drafts / webhook — always manually confirmed.
 
 ![Action plan](docs/screenshots/plan.png)
-
-### Content workbench: topic to distribution
-
-Topic pool sorted by "not mentioned + no content". While writing you get required extraction blocks (numbers +61.6%, definitions +57.3% measured citation-probability lift) and brand facts on the left, a citability pre-check on the right. Finished pieces publish to GitHub / WordPress drafts / WeChat OA drafts / custom webhook — always with a manual confirmation.
-
 ![Workbench](docs/screenshots/workbench.png)
 
-### And more
+**Results** — Per-question before/after (all / CN / global tabs), task-level before/after, verification history; boss-ready one-pager, execution plan, and a complete client delivery package (HTML + CSV).
 
-- **Site audit**: robots / sitemap / llms.txt / extraction blocks, with click-through filtering and direct links to the fixing ticket
-- **Competitors**: each rival's strongest engine, one click away; lost/exclusive questions feed the topic pool
-- **Brand facts**: the single source of truth — llms.txt and JSON-LD are generated from it; AI claims are compared entry by entry
-- **Verification**: per-question before/after across sampling rounds (per market), task-level before/after
-- **Scheduled re-runs**: full cycle every 7/14/30 days for long-term operations and monthly reports
-- **Multi-brand**: one instance, many isolated projects
+**Operations** — Scheduled full-cycle re-runs (every 7/14/30 days), multi-brand with one-click switching, and a manual-sampling loop (export sheet → fill → re-import) that feeds the same metrics.
 
-## Quick start
+## 3. How it differs from other GEO tools
+
+Most GEO products are **monitoring SaaS**: they show mention rates and rankings, charge monthly, and keep your data in their cloud. GeoLook is an **implementation platform**:
+
+| | Typical GEO monitoring SaaS | GeoLook |
+|---|---|---|
+| **Loop depth** | Monitor + advise | Monitor → diagnose → **tickets → assets → auto-verify → deliver** |
+| **Verification** | None (or manual check-off) | Programmatic: re-crawl + next sampling round decide; regressions reopen automatically |
+| **Metrics** | Black-box scores | Fully reproducible; a "where do these numbers come from" panel in the UI; unmeasured shows "unmeasured", never faked |
+| **Chinese market** | Mostly Western engines | First-class CN engine matrix (GLM / Doubao / DeepSeek / Kimi / MiniMax / Nano / Baidu AI) + CN channels calibrated on citation-corpus data (Baike, ranking sites, WeChat, Toutiao…); CN and Global measured separately |
+| **Scoring basis** | Heuristics | Anchored in public empirical data: 602 prompts / 21,143 citations / 187,818 deduplicated CN citations ([references/](references/)) |
+| **Data ownership** | Vendor cloud | **Everything on your machine** under `work/` (JSON/Markdown); `git init` is your backup |
+| **Cost** | Subscription | Free and open source; you only pay your own engine API sampling costs (can be zero — manual sampling works) |
+| **Deliverables** | Dashboard screenshots | Client-ready diagnosis report / strategy / execution plan / ticket CSV — built for agencies and consultants |
+
+Honest limits: single-machine tool, no accounts or team collaboration; sampling frequency and volume depend on your own API budget; "suspected negative" flags are leads for human review, not verdicts. These are deliberate design choices.
+
+## 4. Deployment
+
+### Requirements
+
+- macOS or Linux (Windows via WSL — the code uses `fcntl` file locks)
+- Python **3.9+**
+- Exactly three third-party packages: `requests`, `beautifulsoup4`, `lxml`
+
+### Three steps
 
 ```bash
+# 1. Clone and install
 git clone https://github.com/bingqiang2021/geolook.git
 cd geolook
-pip3 install requests beautifulsoup4 lxml   # the only third-party deps
+pip3 install requests beautifulsoup4 lxml
 
-# Open the dashboard (engine keys can be configured in Settings, stored in local .env)
-python3 scripts/geo.py ui                   # → http://127.0.0.1:8765
+# 2. Start the dashboard (opens your browser)
+python3 scripts/geo.py ui        # → http://127.0.0.1:8765
 
-# Or fully automated
+# 3. (Optional) Configure engine API keys
+#    A: in the dashboard — Settings → Engines & Keys → "Configure" (writes local .env)
+#    B: cp .env.example .env and edit
+```
+
+**Zero keys works too**: automated sampling is skipped; use the manual sampling sheet loop instead. Crawling, auditing, tickets and assets need no keys. One CN-capable key (e.g. DeepSeek/GLM) unlocks auto-derivation of the question bank / brand facts and AI first drafts.
+
+### Remote / server deployment
+
+The server binds to `127.0.0.1` only (a deliberate security boundary — there is no auth layer). For remote access:
+
+```bash
+ssh -N -L 8765:127.0.0.1:8765 user@your-server   # then open http://127.0.0.1:8765 locally
+```
+
+For multi-user setups put a reverse proxy with auth in front. `.env` and `work/` contain secrets and project data — mind file permissions.
+
+### Upgrading
+
+```bash
+git pull        # your data lives in work/ and .env, both gitignored
+```
+
+## 5. Usage
+
+### Route A: fully automated (10–30 min)
+
+```bash
 python3 scripts/geo.py new --url https://example.com --market both
 ```
 
-Works with zero API keys too — automated sampling is skipped and engines without APIs use manual sampling sheets (`sample-sheet` export, `sample-import` ingest).
+`--market` is `cn` / `global` / `both`. Nine steps run automatically: crawl → audit → derive facts/competitors/questions → sample every engine → tickets → assets → report → auto-verify → delivery package, landing in `work/<slug>/delivery/<date>/`.
 
-## Commands
+### Route B: dashboard walkthrough (recommended first time)
 
-| Command | What it does |
+1. **Onboard** — `python3 scripts/geo.py ui`, follow the 3-step wizard (URL + market), hit "create & auto-bootstrap". The first cycle runs in the background.
+2. **Review the foundation** (important, ~10 min) — facts are extracted only from your site copy; unknowns are marked "unconfirmed". Check **Brand Facts** (fix wording, add aliases — missing aliases understate mention rate) and the **Question Bank** (do questions read like real user queries?).
+3. **Status** — Overview for the one-line verdict and health score; **Engines** to drill into each engine and replay raw answers (log factual errors on the spot); **Competitors** to see each rival's strongest engine — that's the channel to go build.
+4. **Diagnosis** — Site audit (click a missing block → its fixing ticket) → Gap diagnosis → Channel map (open any channel for its build plan).
+5. **Execute** — Take tickets P0-first in **Action Plan** (click a title for why/how/acceptance); write in the **Workbench** (pre-check ≥ B, publish as final, then work through the distribution checklist); deploy **Assets** (llms.txt to site root, JSON-LD into `<head>`, snippets into templates — see DEPLOY.md).
+6. **Verify** — Settings → "Auto-verify" re-crawls and judges tickets; after the next sampling round, check per-question before/after in **Verification**.
+7. **Operate** — enable scheduled re-runs (7/14/30 days); generate monthly reports and client packages in **Reports & Delivery**.
+
+### Manual sampling for engines without APIs
+
+```bash
+python3 scripts/geo.py sample-sheet  --slug <project>   # export sheet with per-question guidance
+python3 scripts/geo.py sample-import --slug <project> --file <sheet>
+```
+
+### CLI cheat sheet
+
+| Command | Purpose |
 |---|---|
-| `new` | ★ One URL in, three deliverables out, fully automated |
-| `ui` | ★ Full-workflow dashboard |
-| `serve` / `cycle` | Full pipeline / light loop (crawl→audit→sample→report) |
-| `bootstrap` | Derive brand facts, competitors, question bank from site copy |
-| `crawl` / `audit` | Crawl / 6-dimension GEO scoring |
-| `sample` (+`sample-sheet`/`sample-import`) | API sampling / manual sheets |
-| `plan` | Diagnosis → structured tickets with acceptance criteria |
-| `generate` | Deployable assets (`--draft` adds LLM first drafts) |
-| `lint` | Fabrication-risk check for AI drafts — mandatory before shipping |
-| `verify` | Re-crawl and auto-verify tickets |
-| `report` / `deliverables` / `deliver` | Reports / formal deliverables / client package |
-| `publish` | Push finished content to configured channels (always manual) |
+| `new` / `serve` / `cycle` | Automated new project / full cycle / light loop |
+| `ui` | Full-workflow dashboard |
+| `bootstrap` / `crawl` / `audit` | Derive foundation / crawl / 6-dimension scoring |
+| `sample` / `sample-sheet` / `sample-import` | API sampling / manual sheets |
+| `plan` / `generate` / `lint` | Tickets / assets (`--draft` adds drafts) / fabrication-risk check |
+| `verify` / `report` / `deliverables` / `deliver` | Auto-verify / reports / formal deliverables / client package |
+| `publish` / `task` / `status` / `list` | Publish content / ticket status / project board / projects |
+
+Every command has `--help`.
 
 ## Evidence-based scoring
 
-All six audit dimensions are anchored in public empirical data (602 prompts / 21,143 citations / 187,818 deduplicated CN citations); `scripts/audit.py` implements [references/method.md](references/method.md). A few of the most useful findings:
+All six audit dimensions are anchored in public empirical data; `scripts/audit.py` implements [references/method.md](references/method.md):
 
 - High-impact pages average **1,943 words**; low scorers just 170 (11.4×)
 - Numbers **+61.6%**, definitions **+57.3%**, comparisons **+55.3%**, how-to **+41.2%** citation-probability lift
 - Pure Q&A formatting is **−5.7%** — looking like an FAQ doesn't help
 - Topical relevance is the strongest predictor (r = 0.432), above authority
-- Brand-owned sites get only **1.37%** of CN citations — your site is the fact source, external channels are the citation sources
+- Brand-owned sites get only **1.37%** of CN citations — your site is the fact source; external channels are the citation sources
 
-## Design principles
+## Design principles & security boundaries
 
-- **Single-machine, self-hosted**: stdlib `http.server` bound to 127.0.0.1 only; no database, no accounts — data is plain JSON/Markdown under `work/<project>/`, `git init` is your backup
-- **Never fabricate**: brand facts come only from site copy (unknowns marked "unconfirmed"); inventing competitor names is forbidden; AI drafts must pass a risk lint and human review before publishing
-- **Verification is the product**: if something can be auto-verified, it never relies on someone saying "done"
-- **Publishing is always manual**: channel credentials live in local `.env` (mode 600); every publish requires an explicit click; WeChat/WordPress go to drafts only — there is no automated outbound path
+- **Single-machine, self-hosted**: stdlib `http.server` on 127.0.0.1; no DB, no accounts; data is plain files
+- **Never fabricate**: facts only from site copy; inventing competitor names is forbidden; AI drafts must pass lint + human review
+- **Verification is the product**: anything auto-verifiable never relies on someone saying "done"
+- **Publishing is always manual**: channel credentials in local `.env` (mode 600); every publish is an explicit click; WeChat/WordPress go to drafts only
 
-## Claude Code integration
+## Claude Code integration (optional)
 
-This repo doubles as a Claude Code skill ([SKILL.md](SKILL.md)): drop it into your skills directory and tell Claude "do GEO for example.com" to drive the whole pipeline, including the LLM-judgment steps (question bank design, content drafts, report narration). Claude is optional — every script is a plain CLI.
+This repo doubles as a Claude Code skill ([SKILL.md](SKILL.md)): drop it into your skills directory and tell Claude "do GEO for example.com". Claude is optional — every script is a plain CLI.
 
 ## Layout
 
@@ -144,12 +179,12 @@ scripts/          All logic (geo.py CLI · dashboard.py server · ui.html single
 references/       Methodology: sampling discipline, content patterns, citation structures
 tests/            Unit tests
 work/<slug>/      Per-project data (gitignored, never leaves your machine)
-docs/screenshots/ UI screenshots · docs/demo.mp4 40-second product demo
+docs/             Screenshots and the 40-second demo video
 ```
 
-## Demo
+## Acknowledgements
 
-📹 [40-second demo video](docs/demo.mp4) · 🖼 [All screenshots](docs/screenshots/)
+- [@yaojingang](https://github.com/yaojingang)
 
 ## License
 
