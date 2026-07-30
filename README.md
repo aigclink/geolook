@@ -2,225 +2,189 @@
 
 # Geo**Look**
 
-**开源的全流程 GEO 实施平台 · 自托管**
+**Open-source, self-hosted platform for end-to-end GEO implementation**
 
-面向具体项目：现状分析 → 诊断 → 方案 → 实施计划工单 → 执行落地 → 效果验收
+For a specific project: status analysis → diagnosis → strategy → implementation tickets → execution → verification
 
-简体中文 · [English](README.en.md)
+English · [简体中文](README.zh-CN.md) · [日本語](README.ja.md)
 
 ![License](https://img.shields.io/badge/license-MIT-9184d9) ![Python](https://img.shields.io/badge/python-3.9%2B-9184d9) ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-9184d9) ![Deps](https://img.shields.io/badge/deps-requests%20·%20bs4%20·%20lxml-9184d9)
 
-![产品演示](docs/demo.gif)
+![Product demo](docs/demo.gif)
 
-🌐 [官网 geolook.cc](https://geolook.cc) · 🔍 [在线演示（只读）](https://geolook.cc/demo/) · 📹 [高清演示视频 (mp4)](docs/demo.mp4) · 🖼 [全部截图](docs/screenshots/)
+🌐 [Website geolook.cc](https://geolook.cc) · 🔍 [Live demo (read-only)](https://geolook.cc/demo/) · 📹 [HD demo video (mp4)](docs/demo.mp4) · 🖼 [All screenshots](docs/screenshots/)
 
-<sub>域名生效前可用镜像：[geolook-three.vercel.app](https://geolook-three.vercel.app) · [演示](https://geolook-three.vercel.app/demo/)</sub>
+<sub>Mirror while DNS propagates: [geolook-three.vercel.app](https://geolook-three.vercel.app) · [demo](https://geolook-three.vercel.app/demo/)</sub>
 
 </div>
 
-> GEO = 生成式引擎优化（Generative Engine Optimization）：让 DeepSeek、豆包、ChatGPT、Perplexity 这些 AI 引擎在回答用户问题时，**主动提到并引用你的品牌**。不是地理信息，也不是传统 SEO。
+> GEO = Generative Engine Optimization: getting AI engines (ChatGPT, Perplexity, Gemini, DeepSeek, Doubao…) to **proactively mention and cite your brand** when answering user questions. Not geographic info, not classic SEO.
 
-## 一、解决什么问题
+## 1. Problems it solves
 
-越来越多的用户直接问 AI「有哪些好用的 XX 工具」「XX 和 YY 哪个好」。如果你的品牌：
+More and more users ask AI directly — "best tools for X", "X vs Y, which one". If your brand:
 
-| 问题 | GeoLook 给的答案 |
+| Problem | What GeoLook gives you |
 |---|---|
-| **AI 根本不提你**——搜品类问题时你不在候选集里 | 逐引擎采样真实回答，量化提及率/位次/引用份额，诊断出「完全缺席」还是「竞品主导」 |
-| **不知道为什么不提你**——AI 是黑盒 | 六维站点体检 + 差距诊断：抓不到正文？缺抽取块？没铺 AI 实际引用的阵地？口径不一致？逐项定位 |
-| **知道该做但落不了地**——建议一堆，没人执行没人验收 | 生成带验收标准的实施工单，86% 可由程序自动验收（示例项目 18/21），做没做完不靠口头确认 |
-| **做了不知道有没有用** | 逐题前后期采样对比 + 任务级 before/after，哪些动作真的让 AI 改了口，有数 |
-| **给客户做 GEO 服务，交付难** | 一键产出诊断报告、优化方案、执行方案、工单 CSV、验收表的完整交付包 |
+| **AI never mentions you** — you're not in the candidate set for category questions | Samples real answers engine by engine; quantifies mention rate / rank / citation share; diagnoses "absent" vs "competitor-dominated" |
+| **You don't know why** — AI is a black box | 6-dimension site audit + gap diagnosis: uncrawlable pages? missing extraction blocks? absent from the channels AI actually cites? inconsistent messaging? |
+| **Advice never lands** — recommendations pile up, nobody executes or verifies | Generates implementation tickets with acceptance criteria; 86% auto-verifiable in the sample project (18/21) — "done" is measured, not claimed |
+| **Did the work even help?** | Per-question before/after across sampling rounds + task-level before/after |
+| **You deliver GEO as a service and packaging is painful** | One click produces diagnosis report, strategy, execution plan, ticket CSV, and acceptance sheet for clients |
 
-## 二、功能全景
+## 2. Feature map
 
-四段主线 + 运营能力，全部在一个自托管看板里：
+Four stages plus operations, all in one self-hosted dashboard:
 
-### 现状 · 我在 AI 里什么样
+**Status** — Engine performance across 15 engines (10 automated via API + 5 manual sheets): mention rate, rank, citation share, what each engine actually cites, **sample replay** of raw answers, suspected-negative flags; **brand mention distribution** (you vs. competitors, per engine and aggregated); competitor tables with each rival's strongest engine one click away; a 7-category question bank where every question gets a **diagnosis type** (suspected-negative > competitor-dominated > absent > low-ranked).
 
-- **引擎表现**：国内海外 15 个引擎（10 个 API 自动采样 + 5 个人工采样表），每个引擎的提及率、提及位次、引用份额、它实际在引用谁、**样本回放**（真实回答原文，品牌命中高亮）、疑似负面标记
-- **品牌提及分布**：单引擎与全引擎汇总，回答里你和竞品各占多少（国内/海外分开算）
-- **竞品对比**：同一批无提示样本下的对手出现率；**每个对手最强的引擎**一键联动；「被抢走的问题」「你独占的问题」直接变成选题池
-- **问题库**：七组问题（推荐/比较/替代/价格/风险/品牌验证/场景），每题带**诊断分型**（疑似负面 > 竞品主导 > 完全缺席 > 排名靠后），点名探测题单独归类不污染指标
+![Engines](docs/screenshots/engines.png)
 
-![引擎表现](docs/screenshots/engines.png)
+**Diagnosis** — Site audit (robots / sitemap / llms.txt / accessibility / language coverage / extraction blocks, with click-through filtering straight to the fixing ticket); gap diagnosis (content → channels → facts); a **channel map of 19 channels** weighted by real citation-corpus data, each specifying what to build, how much, at what cadence, by whom; a **brand facts library** as the single source of truth that llms.txt, JSON-LD and content drafts are generated from.
 
-### 诊断 · 为什么是这样
+![Channel map](docs/screenshots/channels.png)
 
-- **站点体检**：robots 封禁 / sitemap / llms.txt / 页面可访问 / 语言覆盖 / 抽取块缺口，六维打分；点等级或缺块直接筛选问题页、直达修复工单
-- **差距诊断**：内容缺口 → 阵地缺口 → 事实偏差，三类按「先修哪个」排序
-- **阵地地图**：19 个阵地（百科/榜单站/公众号/头条/知乎/技术社区/G2/Wikipedia/Reddit/YouTube…）按真实引用语料标注分量与优先级；每个阵地写清**建什么、建多少、节奏、谁来做**
-- **品牌事实库**：全站唯一口径来源——llms.txt、JSON-LD、内容草稿都从这里取事实；AI 说法逐条比对，比对过「事实一致性」才进健康分
+**Action** — Structured tickets (rationale / owner / effort / window / acceptance criteria) with "first-measured → current → target" progress bars and automatic reopening on regressions; a **content workbench** (topic pool sorted by "not mentioned + no content", required extraction blocks and brand facts at hand, live citability pre-check, fabrication-risk lint for AI drafts, and a **distribution checklist** matching each piece to its target channels); **deploy assets** (llms.txt, JSON-LD, HTML snippets, each labeled with its destination, plus a DEPLOY.md runbook); **publishing** to GitHub / WordPress drafts / WeChat OA drafts / webhook — always manually confirmed.
 
-![阵地地图](docs/screenshots/channels.png)
+![Action plan](docs/screenshots/plan.png)
+![Workbench](docs/screenshots/workbench.png)
 
-### 提升 · 该做什么
+**Results** — Per-question before/after (all / CN / global tabs), task-level before/after, verification history; boss-ready one-pager, execution plan, and a complete client delivery package (HTML + CSV).
 
-- **行动计划**：结构化工单（依据/负责角色/工作量/时间窗口/验收标准），标「自动」的由重抓站点 + 下期采样判定；量化工单显示「首测 → 当前 → 目标」进度条，回归自动打回
-- **内容工作台**：选题池按「未提及 + 无内容」排序；写稿时左侧给必含抽取块与品牌事实，右侧实时**可被引用度预检**；AI 初稿必须过编造风险 lint；**分发清单**按问题类别匹配目标阵地，铺完打勾
-- **部署资产**：llms.txt、JSON-LD（Organization/FAQ/Article…）、定义块与 FAQ 的 HTML 片段，每个文件标注去处；DEPLOY.md 给开发的部署清单含验收标准
-- **发布渠道**：成稿一键发到 GitHub / WordPress 草稿 / 公众号草稿箱 / 自定义 Webhook——凭证在本地 `.env`，每次发布人工确认，无任何自动外发路径
+**Operations** — Scheduled full-cycle re-runs (every 7/14/30 days), multi-brand with one-click switching, and a manual-sampling loop (export sheet → fill → re-import) that feeds the same metrics.
 
-![行动计划](docs/screenshots/plan.png)
-![内容工作台](docs/screenshots/workbench.png)
+## 3. How it differs from other GEO tools
 
-### 成效 · 做了有没有用
+Most GEO products are **monitoring SaaS**: they show mention rates and rankings, charge monthly, and keep your data in their cloud. GeoLook is an **implementation platform**:
 
-- **效果验收**：逐题前后期提及率对比（全部/国内/海外分 tab）、任务级 before/after、验收历史
-- **报告与交付**：给老板的一页结论、给执行团队的分批执行方案、给客户的完整交付包（HTML + CSV）
-
-### 运营
-
-- **周期复跑**：每 7/14/30 天自动跑完整一期，做长期运营与月报
-- **多品牌**：一个实例管多个项目，数据互相隔离，侧栏一键切换
-- **人工采样闭环**：无 API 的引擎导出采样表，人工/浏览器填完回灌，与自动采样同一套指标
-
-## 三、和市面 GEO 工具的区别
-
-市面上的 GEO 产品绝大多数是**监测型 SaaS**：告诉你提及率和排名，按月收订阅费，数据在别人云上。GeoLook 的定位是**实施平台**，差别在这几处：
-
-| | 典型 GEO 监测 SaaS | GeoLook |
+| | Typical GEO monitoring SaaS | GeoLook |
 |---|---|---|
-| **闭环深度** | 监测 + 建议 | 监测 → 诊断 → **工单 → 资产 → 自动验收 → 交付**，落地全流程 |
-| **验收方式** | 无（或人工回填） | 程序判定：重抓站点 + 下期采样自动验收，回归自动打回 |
-| **指标口径** | 黑盒算法 | 全部可复现，界面里点开「这些数字怎么来的」查完整口径；算不出显示「未测」，不编数 |
-| **中文市场** | 多为海外引擎 | 国内引擎矩阵（GLM/豆包/DeepSeek/Kimi/MiniMax/纳米/百度AI）+ 按国内引用语料标定的阵地（百科/榜单站/公众号/头条…），国内海外分开出题分开算 |
-| **评分依据** | 经验规则 | 锚定公开实证数据：602 条 Prompt / 21,143 条引用 / CN-GEO 187,818 条国内去重引用（[references/](references/)） |
-| **数据归属** | 厂商云端 | **全部在你本机** `work/` 目录（JSON/Markdown），git 一下就是备份 |
-| **成本** | 按月订阅 | 开源免费，只花你自己的引擎 API 采样费（可为零：纯人工采样也能跑） |
-| **交付能力** | 截图仪表盘 | 直接产出可发客户的诊断报告/优化方案/执行方案/工单表，适合代理商与顾问 |
+| **Loop depth** | Monitor + advise | Monitor → diagnose → **tickets → assets → auto-verify → deliver** |
+| **Verification** | None (or manual check-off) | Programmatic: re-crawl + next sampling round decide; regressions reopen automatically |
+| **Metrics** | Black-box scores | Fully reproducible; a "where do these numbers come from" panel in the UI; unmeasured shows "unmeasured", never faked |
+| **Chinese market** | Mostly Western engines | First-class CN engine matrix (GLM / Doubao / DeepSeek / Kimi / MiniMax / Nano / Baidu AI) + CN channels calibrated on citation-corpus data (Baike, ranking sites, WeChat, Toutiao…); CN and Global measured separately |
+| **Scoring basis** | Heuristics | Anchored in public empirical data: 602 prompts / 21,143 citations / 187,818 deduplicated CN citations ([references/](references/)) |
+| **Data ownership** | Vendor cloud | **Everything on your machine** under `work/` (JSON/Markdown); `git init` is your backup |
+| **Cost** | Subscription | Free and open source; you only pay your own engine API sampling costs (can be zero — manual sampling works) |
+| **Deliverables** | Dashboard screenshots | Client-ready diagnosis report / strategy / execution plan / ticket CSV — built for agencies and consultants |
 
-诚实说明边界：GeoLook 是单机工具，没有账号体系和团队协作；采样频率与样本量由你自己的 API 预算决定；「疑似负面」等判定是线索提示，定性仍需人工复核——这些是刻意的设计取舍，不是还没做完。
+Honest limits: single-machine tool, no accounts or team collaboration; sampling frequency and volume depend on your own API budget; "suspected negative" flags are leads for human review, not verdicts. These are deliberate design choices.
 
-## 四、部署教程
+## 4. Deployment
 
-### 环境要求
+### Requirements
 
-- macOS 或 Linux（Windows 请用 WSL；代码用了 `fcntl` 文件锁）
+- macOS or Linux (Windows via WSL — the code uses `fcntl` file locks)
 - Python **3.9+**
-- 唯三的第三方依赖：`requests`、`beautifulsoup4`、`lxml`
+- Exactly three third-party packages: `requests`, `beautifulsoup4`, `lxml`
 
-### 三步跑起来
+### Three steps
 
 ```bash
-# 1. 克隆并安装依赖
+# 1. Clone and install
 git clone https://github.com/bingqiang2021/geolook.git
 cd geolook
 pip3 install requests beautifulsoup4 lxml
 
-# 2. 启动看板（自动打开浏览器）
+# 2. Start the dashboard (opens your browser)
 python3 scripts/geo.py ui        # → http://127.0.0.1:8765
 
-# 3.（可选）配置引擎 API Key
-#    方式 A：看板「设置 → 引擎与密钥」里点「配置」填入，自动写进本地 .env
-#    方式 B：cp .env.example .env 后手动编辑
+# 3. (Optional) Configure engine API keys
+#    A: in the dashboard — Settings → Engines & Keys → "Configure" (writes local .env)
+#    B: cp .env.example .env and edit
 ```
 
-**一个 Key 都不配也能用**：自动采样会跳过，改用「导出人工采样表 → 人工/浏览器采样 → 回灌」的流程；抓站、体检、工单、资产等功能不依赖任何 Key。配一个国内引擎 Key（如 DeepSeek/GLM）即可解锁「自动推导问题库/品牌事实」和「AI 初稿」。
+**Zero keys works too**: automated sampling is skipped; use the manual sampling sheet loop instead. Crawling, auditing, tickets and assets need no keys. One CN-capable key (e.g. DeepSeek/GLM) unlocks auto-derivation of the question bank / brand facts and AI first drafts.
 
-### 服务器/远程部署
+### Remote / server deployment
 
-服务只绑定 `127.0.0.1`（刻意的安全边界，无认证体系）。要远程访问：
+The server binds to `127.0.0.1` only (a deliberate security boundary — there is no auth layer). For remote access:
 
 ```bash
-# 推荐：SSH 隧道
-ssh -N -L 8765:127.0.0.1:8765 user@your-server
-# 然后本地浏览器打开 http://127.0.0.1:8765
+ssh -N -L 8765:127.0.0.1:8765 user@your-server   # then open http://127.0.0.1:8765 locally
 ```
 
-多人使用请自行加反向代理 + 认证（nginx basic auth / OAuth proxy 等）。`.env` 与 `work/` 含密钥和项目数据，注意文件权限。
+For multi-user setups put a reverse proxy with auth in front. `.env` and `work/` contain secrets and project data — mind file permissions.
 
-### 升级
+### Upgrading
 
 ```bash
-git pull        # 数据在 work/ 与 .env，均被 gitignore，升级不影响
+git pull        # your data lives in work/ and .env, both gitignored
 ```
 
-## 五、使用教程
+## 5. Usage
 
-### 路线 A：一条命令全自动（约 10–30 分钟）
+### Route A: fully automated (10–30 min)
 
 ```bash
 python3 scripts/geo.py new --url https://example.com --market both
 ```
 
-`--market` 取 `cn` / `global` / `both`。九步自动完成：抓站 → 体检 → 推导品牌事实/竞品/问题库 → 逐引擎采样 → 生成工单 → 产出资产 → 报告 → 自动验收 → 交付包。产出在 `work/<项目>/delivery/<日期>/`。
+`--market` is `cn` / `global` / `both`. Nine steps run automatically: crawl → audit → derive facts/competitors/questions → sample every engine → tickets → assets → report → auto-verify → delivery package, landing in `work/<slug>/delivery/<date>/`.
 
-### 路线 B：看板逐步走（推荐首次使用）
+### Route B: dashboard walkthrough (recommended first time)
 
-**第 1 步 · 接入品牌**：`python3 scripts/geo.py ui` → 首次进入自动到接入引导，填官网域名、选目标市场，点「创建并开始自动引导」。后台自动跑完首期（可关页面，任务照跑）。
+1. **Onboard** — `python3 scripts/geo.py ui`, follow the 3-step wizard (URL + market), hit "create & auto-bootstrap". The first cycle runs in the background.
+2. **Review the foundation** (important, ~10 min) — facts are extracted only from your site copy; unknowns are marked "unconfirmed". Check **Brand Facts** (fix wording, add aliases — missing aliases understate mention rate) and the **Question Bank** (do questions read like real user queries?).
+3. **Status** — Overview for the one-line verdict and health score; **Engines** to drill into each engine and replay raw answers (log factual errors on the spot); **Competitors** to see each rival's strongest engine — that's the channel to go build.
+4. **Diagnosis** — Site audit (click a missing block → its fixing ticket) → Gap diagnosis → Channel map (open any channel for its build plan).
+5. **Execute** — Take tickets P0-first in **Action Plan** (click a title for why/how/acceptance); write in the **Workbench** (pre-check ≥ B, publish as final, then work through the distribution checklist); deploy **Assets** (llms.txt to site root, JSON-LD into `<head>`, snippets into templates — see DEPLOY.md).
+6. **Verify** — Settings → "Auto-verify" re-crawls and judges tickets; after the next sampling round, check per-question before/after in **Verification**.
+7. **Operate** — enable scheduled re-runs (7/14/30 days); generate monthly reports and client packages in **Reports & Delivery**.
 
-**第 2 步 · 人工核对底座**（重要，10 分钟）：自动推导只从官网正文抽取，抽不到的标「待确认」。到「**品牌事实库**」核对口径、补别名与关键数字；到「**问题库**」检查题目是否像真实用户问法（漏配别名会低估提及率）。
-
-**第 3 步 · 看现状**：「总览」一句结论 + 健康分五项；「引擎表现」逐引擎下钻，点样本回放看 AI 原话，发现说错的点「记一条事实偏差」；「竞品对比」看对手最强的引擎——那就是你要去建设的信源。
-
-**第 4 步 · 看诊断**：「站点体检」技术层（点缺块直达修复工单）→「差距诊断」内容/阵地/事实三类缺口 →「阵地地图」每个阵地点开看建设方案（建什么/建多少/节奏/谁来做）。
-
-**第 5 步 · 执行**：
-- 「行动计划」按 P0→P1 领工单，点标题看详情（为什么做/具体怎么干/怎么算做完）
-- 「内容工作台」从选题池选题 → 按大纲写稿（右侧预检达到 B 以上）→「发布为成稿」→ **分发清单**告诉你该铺到哪些阵地，铺完打勾
-- 「部署资产」把 llms.txt 传网站根目录、JSON-LD 贴进 `<head>`、片段贴进模板（每个文件顶部写了去处，完整清单见 DEPLOY.md）
-
-**第 6 步 · 验收**：「设置 → 运行任务」点「自动验收」（重抓站点判定工单）；下一期采样后到「效果验收」看逐题 before/after。
-
-**第 7 步 · 长期运营**：「设置」开启周期复跑（每 7/14/30 天自动跑一期）；「报告与交付」生成月报与客户交付包。
-
-### 无 API 引擎的人工采样
+### Manual sampling for engines without APIs
 
 ```bash
-python3 scripts/geo.py sample-sheet --slug <项目>    # 导出采样表（含每题指引）
-# 人工/浏览器在纳米AI、百度AI、ChatGPT网页版等提问并粘贴回答
-python3 scripts/geo.py sample-import --slug <项目> --file <采样表>
+python3 scripts/geo.py sample-sheet  --slug <project>   # export sheet with per-question guidance
+python3 scripts/geo.py sample-import --slug <project> --file <sheet>
 ```
 
-也可在看板「设置 → 运行任务」里点「导出人工采样表」，「引擎表现」页导入。
+### CLI cheat sheet
 
-### CLI 速查
-
-| 命令 | 作用 |
+| Command | Purpose |
 |---|---|
-| `new` / `serve` / `cycle` | 全自动新项目 / 已有项目跑完整一期 / 轻量循环 |
-| `ui` | 全流程看板 |
-| `bootstrap` / `crawl` / `audit` | 推导底座 / 抓站 / 六维打分 |
-| `sample` / `sample-sheet` / `sample-import` | API 采样 / 人工采样表导出与回灌 |
-| `plan` / `generate` / `lint` | 生成工单 / 生成资产（`--draft` 出初稿）/ 初稿风险检查 |
-| `verify` / `report` / `deliverables` / `deliver` | 自动验收 / 报告 / 三份交付物 / 客户交付包 |
-| `publish` / `task` / `status` / `list` | 发布成稿 / 工单状态 / 项目看板 / 项目列表 |
+| `new` / `serve` / `cycle` | Automated new project / full cycle / light loop |
+| `ui` | Full-workflow dashboard |
+| `bootstrap` / `crawl` / `audit` | Derive foundation / crawl / 6-dimension scoring |
+| `sample` / `sample-sheet` / `sample-import` | API sampling / manual sheets |
+| `plan` / `generate` / `lint` | Tickets / assets (`--draft` adds drafts) / fabrication-risk check |
+| `verify` / `report` / `deliverables` / `deliver` | Auto-verify / reports / formal deliverables / client package |
+| `publish` / `task` / `status` / `list` | Publish content / ticket status / project board / projects |
 
-每条命令 `--help` 有完整参数。
+Every command has `--help`.
 
-## 评分依据
+## Evidence-based scoring
 
-六个体检维度全部锚在公开实证数据上，`scripts/audit.py` 是 [references/method.md](references/method.md) 的代码实现。几条最有用的结论：
+All six audit dimensions are anchored in public empirical data; `scripts/audit.py` implements [references/method.md](references/method.md):
 
-- 高影响力页面平均 **1,943 词**，低分页仅 170 词（11.4×）
-- 含数字 **+61.6%**、定义 **+57.3%**、对比 **+55.3%**、how-to **+41.2%** 被引用概率
-- 纯 Q&A 排版反而 **−5.7%**——排成问答样子没用
-- 对题性是最强预测因子（r = 0.432），高于权威度
-- 品牌官网类信源只占国内全库引用的 **1.37%**——官网是事实源不是引用源，外部阵地才是引用来源
+- High-impact pages average **1,943 words**; low scorers just 170 (11.4×)
+- Numbers **+61.6%**, definitions **+57.3%**, comparisons **+55.3%**, how-to **+41.2%** citation-probability lift
+- Pure Q&A formatting is **−5.7%** — looking like an FAQ doesn't help
+- Topical relevance is the strongest predictor (r = 0.432), above authority
+- Brand-owned sites get only **1.37%** of CN citations — your site is the fact source; external channels are the citation sources
 
-## 设计原则与安全边界
+## Design principles & security boundaries
 
-- **单机自托管**：标准库 `http.server` 只绑 127.0.0.1；无数据库无账号，数据即文件
-- **宁缺毋滥**：品牌事实只从官网正文抽取，抽不到标「待确认」；竞品严禁发明名字；AI 初稿必须过 lint 并人工核实
-- **验收即产品**：能自动判定的绝不靠人回填
-- **发布永远手动**：渠道凭证在本地 `.env`（权限 600），每次发布人工点击确认；公众号/WordPress 只进草稿箱
+- **Single-machine, self-hosted**: stdlib `http.server` on 127.0.0.1; no DB, no accounts; data is plain files
+- **Never fabricate**: facts only from site copy; inventing competitor names is forbidden; AI drafts must pass lint + human review
+- **Verification is the product**: anything auto-verifiable never relies on someone saying "done"
+- **Publishing is always manual**: channel credentials in local `.env` (mode 600); every publish is an explicit click; WeChat/WordPress go to drafts only
 
-## 与 Claude Code 集成（可选）
+## Claude Code integration (optional)
 
-本仓库同时是一个 Claude Code 技能（[SKILL.md](SKILL.md)）：放进技能目录后对 Claude 说「给 example.com 做 GEO」即可驱动全流程。不用 Claude 也完全可用——所有脚本都是普通 CLI。
+This repo doubles as a Claude Code skill ([SKILL.md](SKILL.md)): drop it into your skills directory and tell Claude "do GEO for example.com". Claude is optional — every script is a plain CLI.
 
-## 目录结构
+## Layout
 
 ```
-scripts/          全部逻辑（geo.py CLI 入口 · dashboard.py 看板服务 · ui.html 单页前端）
-references/       方法论：采样纪律、内容模式实测、国内外平台引用结构
-tests/            单元测试
-work/<slug>/      每个项目的全部数据（gitignore，不出本机）
-docs/             截图与 40 秒演示视频
+scripts/          All logic (geo.py CLI · dashboard.py server · ui.html single-page UI)
+references/       Methodology: sampling discipline, content patterns, citation structures
+tests/            Unit tests
+work/<slug>/      Per-project data (gitignored, never leaves your machine)
+docs/             Screenshots and the 40-second demo video
 ```
 
-## 致谢
+## Acknowledgements
 
 - [@yaojingang](https://github.com/yaojingang)
 
