@@ -82,7 +82,7 @@ Honest limits: single-machine tool, no accounts or team collaboration; sampling 
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/bingqiang2021/geolook.git
+git clone https://github.com/aigclink/geolook.git
 cd geolook
 pip3 install requests beautifulsoup4 lxml
 

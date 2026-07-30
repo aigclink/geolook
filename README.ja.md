@@ -80,7 +80,7 @@ GEO 製品の大半は**モニタリング SaaS**です：言及率とランキ�
 
 ```bash
 # 1. クローンしてインストール
-git clone https://github.com/bingqiang2021/geolook.git
+git clone https://github.com/aigclink/geolook.git
 cd geolook
 pip3 install requests beautifulsoup4 lxml
 

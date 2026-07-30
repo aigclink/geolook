@@ -104,7 +104,7 @@
 
 ```bash
 # 1. 克隆并安装依赖
-git clone https://github.com/bingqiang2021/geolook.git
+git clone https://github.com/aigclink/geolook.git
 cd geolook
 pip3 install requests beautifulsoup4 lxml
 
