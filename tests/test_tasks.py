@@ -69,7 +69,7 @@ class TestMarketAvg(unittest.TestCase):
     def test_check_all_none_market_not_failed(self):
         m = _metrics({"a": _plat(mention=None, cite=None)})
         task = {"acceptance": {"type": "auto", "check": "metrics.mention_rate_gte:cn:0.3"}}
-        ok, why = V.check(task, {}, m)
+        ok, why, _prog = V.check(task, {}, m)
         self.assertIsNone(ok)  # 无数据 → 无法判定，而不是 False「未达标」
 
 

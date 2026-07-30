@@ -290,8 +290,7 @@ def draft(slug: str, outline: dict, provider: str | None = None) -> str:
     """用已配置的 LLM API 按大纲出初稿。没有可用 Key 就返回空。"""
     import sample as S
 
-    cands = [provider] if provider else ["deepseek", "glm", "doubao", "openai"]
-    plat = next((p for p in cands if p and S.available(p)), None)
+    plat = S.pick_llm(provider)
     if not plat:
         return ""
     cfg = G.load_config(slug)

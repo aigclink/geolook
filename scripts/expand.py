@@ -202,8 +202,7 @@ def _convert_llm(terms: list[dict]) -> bool:
 
     分批各 40 行：批量太大时行数极易对不上，小批失败只影响该批（保留模板问句）。"""
     import sample as S
-    plat = next((p for p in ("deepseek", "glm", "doubao", "openai", "gemini")
-                 if S.available(p)), None)
+    plat = S.pick_llm()
     if not plat or not terms:
         return False
     ok_any = False

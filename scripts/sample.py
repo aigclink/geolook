@@ -36,7 +36,7 @@ PROVIDERS = {
         "name": "智谱GLM", "market": "cn",
         "base": "https://open.bigmodel.cn/api/paas/v4",
         # 采样默认用各家的轻量档：测的是「模型认不认识这个品牌」，不是推理质量，口径一致优先。
-        "model": os.environ.get("GLM_MODEL", "glm-4-flash"),
+        "model": "glm-4-flash",
         "model_env": "GLM_MODEL",
         "key_env": "ZHIPUAI_API_KEY",
         "search": False,
@@ -48,7 +48,7 @@ PROVIDERS = {
         "name": "豆包(方舟API)", "market": "cn",
         "protocol": "ark",
         "base": "https://ark.cn-beijing.volces.com/api/v3",
-        "model": os.environ.get("ARK_MODEL", "doubao-seed-1-6-250615"),
+        "model": "doubao-seed-1-6-250615",
         "model_env": "ARK_MODEL",
         "key_env": "ARK_API_KEY",
         "search": True,
@@ -57,7 +57,7 @@ PROVIDERS = {
     "deepseek": {
         "name": "DeepSeek", "market": "cn",
         "base": "https://api.deepseek.com/v1",
-        "model": os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-flash"),
+        "model": "deepseek-v4-flash",
         "model_env": "DEEPSEEK_MODEL",
         "key_env": "DEEPSEEK_API_KEY",
         "search": False,
@@ -66,7 +66,7 @@ PROVIDERS = {
     "kimi": {
         "name": "Kimi", "market": "cn",
         "base": "https://api.moonshot.cn/v1",
-        "model": os.environ.get("MOONSHOT_MODEL", "kimi-k2-0905-preview"),
+        "model": "kimi-k2-0905-preview",
         "model_env": "MOONSHOT_MODEL",
         "key_env": "MOONSHOT_API_KEY",
         "search": False,
@@ -75,7 +75,7 @@ PROVIDERS = {
     "minimax": {
         "name": "MiniMax", "market": "cn",
         "base": "https://api.minimaxi.com/v1",
-        "model": os.environ.get("MINIMAX_MODEL", "MiniMax-M2"),
+        "model": "MiniMax-M2",
         "model_env": "MINIMAX_MODEL",
         "key_env": "MINIMAX_API_KEY",
         "search": False,
@@ -85,7 +85,7 @@ PROVIDERS = {
     "gemini": {
         "name": "Gemini", "market": "global",
         "base": "https://generativelanguage.googleapis.com/v1beta/openai",
-        "model": os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
+        "model": "gemini-2.5-flash",
         "model_env": "GEMINI_MODEL",
         "key_env": "GEMINI_API_KEY",
         "search": False,
@@ -94,7 +94,7 @@ PROVIDERS = {
     "openai": {
         "name": "OpenAI(ChatGPT)", "market": "global",
         "base": os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-        "model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+        "model": "gpt-4o-mini",
         "model_env": "OPENAI_MODEL",
         "key_env": "OPENAI_API_KEY",
         "search": False,
@@ -105,7 +105,7 @@ PROVIDERS = {
         "name": "Claude", "market": "global",
         "protocol": "anthropic",
         "base": "https://api.anthropic.com/v1",
-        "model": os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5"),
+        "model": "claude-sonnet-5",
         "model_env": "ANTHROPIC_MODEL",
         "key_env": "ANTHROPIC_API_KEY",
         "search": False,
@@ -114,7 +114,7 @@ PROVIDERS = {
     "grok": {
         "name": "Grok", "market": "global",
         "base": "https://api.x.ai/v1",
-        "model": os.environ.get("GROK_MODEL", "grok-3-mini"),
+        "model": "grok-3-mini",
         "model_env": "GROK_MODEL",
         "key_env": "XAI_API_KEY",
         "search": False,
@@ -123,7 +123,7 @@ PROVIDERS = {
     "perplexity": {
         "name": "Perplexity", "market": "global",
         "base": "https://api.perplexity.ai",
-        "model": os.environ.get("PERPLEXITY_MODEL", "sonar"),
+        "model": "sonar",
         "model_env": "PERPLEXITY_MODEL",
         "key_env": "PERPLEXITY_API_KEY",
         "search": True,
@@ -173,9 +173,33 @@ def questions_for(cfg: dict, platform: str) -> list[dict]:
     return out
 
 
+def _p_model(p: dict) -> str:
+    """调用时解析模型：环境变量覆盖优先，否则用注册表默认。
+
+    必须在调用时而不是 import 时解析——界面改完模型要立即生效，
+    清掉覆盖也要能回落到出厂默认。"""
+    menv = p.get("model_env")
+    return (os.environ.get(menv) if menv else None) or p["model"]
+
+
+def model_for(platform: str) -> str:
+    return _p_model(PROVIDERS[platform])
+
+
 def available(platform: str) -> bool:
     p = PROVIDERS.get(platform)
     return bool(p and os.environ.get(p["key_env"]))
+
+
+# 所有「挑一个可用 LLM 干活」的模块（bootstrap/expand/generate）共用这一条候选链，
+# 避免各写一份后悄悄漂移。顺序：便宜的国内引擎优先。
+LLM_PREFS = ("deepseek", "glm", "doubao", "openai", "gemini")
+
+
+def pick_llm(prefer: str | None = None):
+    """按候选链返回第一个配了 Key 的平台；都没配返回 None。"""
+    cands = [prefer] if prefer else list(LLM_PREFS)
+    return next((c for c in cands if c and available(c)), None)
 
 
 def ask_ark(p: dict, key: str, question: str, timeout: int) -> dict:
@@ -183,7 +207,7 @@ def ask_ark(p: dict, key: str, question: str, timeout: int) -> dict:
     H = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     try:
         r = requests.post(f"{p['base']}/responses", headers=H,
-                          json={"model": p["model"], "input": question,
+                          json={"model": _p_model(p), "input": question,
                                 "tools": [{"type": "web_search"}]}, timeout=timeout)
         if r.status_code == 200:
             d = r.json()
@@ -202,7 +226,7 @@ def ask_ark(p: dict, key: str, question: str, timeout: int) -> dict:
                 seen = set()
                 refs = [c for c in refs if not (c["url"] in seen or seen.add(c["url"]))]
                 return {"ok": True, "answer": answer, "citations": refs,
-                        "raw_model": p["model"], "searched": True}
+                        "raw_model": _p_model(p), "searched": True}
         elif "ToolNotOpen" not in r.text:
             return {"ok": False, "answer": "", "error": f"HTTP {r.status_code}: {r.text[:300]}"}
     except Exception:  # noqa: BLE001
@@ -210,13 +234,13 @@ def ask_ark(p: dict, key: str, question: str, timeout: int) -> dict:
 
     try:  # 降级：不联网的普通对话
         r = requests.post(f"{p['base']}/chat/completions", headers=H,
-                          json={"model": p["model"],
+                          json={"model": _p_model(p),
                                 "messages": [{"role": "user", "content": question}]}, timeout=timeout)
         if r.status_code != 200:
             return {"ok": False, "answer": "", "error": f"HTTP {r.status_code}: {r.text[:300]}"}
         d = r.json()
         return {"ok": True, "answer": d["choices"][0]["message"].get("content") or "",
-                "citations": [], "raw_model": p["model"], "searched": False}
+                "citations": [], "raw_model": _p_model(p), "searched": False}
     except Exception as e:  # noqa: BLE001
         return {"ok": False, "answer": "", "error": f"{type(e).__name__}: {e}"}
 
@@ -231,7 +255,7 @@ def ask_anthropic(p: dict, key: str, question: str, timeout: int) -> dict:
                 headers={"x-api-key": key, "anthropic-version": "2023-06-01",
                          "content-type": "application/json"},
                 # max_tokens 4096：品牌认知问答的自然长度以内，同时护住 120s 请求超时
-                json={"model": p["model"], "max_tokens": 4096,
+                json={"model": _p_model(p), "max_tokens": 4096,
                       "messages": [{"role": "user", "content": question}]},
                 timeout=timeout,
             )
@@ -246,7 +270,7 @@ def ask_anthropic(p: dict, key: str, question: str, timeout: int) -> dict:
             answer = "".join(b.get("text", "") for b in d.get("content", [])
                              if b.get("type") == "text")
             return {"ok": True, "answer": answer, "citations": [],
-                    "raw_model": d.get("model", p["model"])}
+                    "raw_model": d.get("model", _p_model(p))}
         except requests.exceptions.Timeout as e:
             if attempt < len(delays):
                 time.sleep(delays[attempt])
@@ -266,7 +290,7 @@ def ask(platform: str, question: str, timeout: int = 120) -> dict:
     if p.get("protocol") == "anthropic":
         return ask_anthropic(p, key, question, timeout)
     body = {
-        "model": p["model"],
+        "model": _p_model(p),
         "messages": [{"role": "user", "content": question}],
         "temperature": 0.7,
     }
@@ -302,7 +326,7 @@ def ask(platform: str, question: str, timeout: int = 120) -> dict:
                     refs.append({"url": u, "title": ""})
             seen = set()
             refs = [c for c in refs if not (c["url"] in seen or seen.add(c["url"]))]
-            return {"ok": True, "answer": answer, "citations": refs, "raw_model": data.get("model", p["model"])}
+            return {"ok": True, "answer": answer, "citations": refs, "raw_model": data.get("model", _p_model(p))}
         except requests.exceptions.Timeout as e:
             if attempt < len(delays):
                 time.sleep(delays[attempt])

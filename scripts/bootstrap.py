@@ -50,8 +50,7 @@ def _ask_json(prompt: str, provider: str | None = None, timeout: int = 300) -> d
     """调 LLM 并解析出 JSON。抽不出就返回 None，由调用方降级处理。"""
     import sample as S
 
-    cands = [provider] if provider else ["deepseek", "glm", "doubao", "openai", "gemini"]
-    plat = next((p for p in cands if p and S.available(p)), None)
+    plat = S.pick_llm(provider)
     if not plat:
         return None
     res = S.ask(plat, prompt, timeout=timeout)
