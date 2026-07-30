@@ -153,6 +153,19 @@ python3 scripts/geo.py sample-import --slug <project> --file <sheet>
 
 Every command has `--help`.
 
+## FAQ
+
+**Q: AI answers differ every time — how can sampling results be stable?**
+
+A single AI answer is inherently stochastic, so GeoLook **never reads a single answer** as a metric. Stability comes from four layers:
+
+1. **Aggregation** — mention rate and friends are ratios over dozens of questions × multiple engines; per-question jitter averages out.
+2. **Fixed variables** — each engine's sampling model is pinned (visible and changeable in Settings), the question bank is fixed, and the same set is reused across rounds; the only thing that changes is time.
+3. **Repeat rounds** — `sample --repeat N` samples each question multiple times when your budget allows.
+4. **Attribution discipline** — the UI explicitly labels single-round movement as observational ("a drop isn't necessarily a regression — sampling is noisy"); only two consecutive rounds moving the same way count as a trend, and ticket verification relies on deterministic signals (re-crawling the site) rather than sampling alone.
+
+Honestly put: it measures a **distribution**, not a fixed value — which is exactly what real users experience, since every real query to an AI engine draws a random sample too.
+
 ## Evidence-based scoring
 
 All six audit dimensions are anchored in public empirical data; `scripts/audit.py` implements [references/method.md](references/method.md):
