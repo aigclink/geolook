@@ -201,6 +201,10 @@ docs/             Screenshots and the 40-second demo video
 
 - [@yaojingang](https://github.com/yaojingang)
 
+## Contact
+
+Questions, ideas or collaboration — email [bingqiang2008@gmail.com](mailto:bingqiang2008@gmail.com), or open an [issue](https://github.com/aigclink/geolook/issues).
+
 ## License
 
 [MIT](LICENSE)

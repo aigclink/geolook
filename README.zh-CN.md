@@ -237,6 +237,10 @@ docs/             截图与 40 秒演示视频
 
 - [@yaojingang](https://github.com/yaojingang)
 
+## 联系我
+
+问题、建议或合作：邮箱 [bingqiang2008@gmail.com](mailto:bingqiang2008@gmail.com)，或提 [issue](https://github.com/aigclink/geolook/issues)。
+
 ## License
 
 [MIT](LICENSE)

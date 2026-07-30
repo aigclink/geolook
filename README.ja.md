@@ -199,6 +199,10 @@ docs/             スクリーンショットと 40 秒デモ動画
 
 - [@yaojingang](https://github.com/yaojingang)
 
+## お問い合わせ
+
+質問・提案・コラボレーションは [bingqiang2008@gmail.com](mailto:bingqiang2008@gmail.com) まで。[issue](https://github.com/aigclink/geolook/issues) も歓迎。
+
 ## License
 
 [MIT](LICENSE)
