@@ -436,6 +436,7 @@ Object.assign(UI_D.en,{
 '还没有拓词数据':'No mining data yet','候选都已入库——重新拓词看看有没有新词。':'All candidates are already in the bank — re-run to look for new terms.',
 '先勾选要入库的题':'Check some questions first','拓词扩题':'Keyword mining','LLM 转写':'LLM-phrased','模板转写':'template-phrased',
 '对手拓词 · 用户在主动找替代品':'Rival mining · users actively searching for alternatives',
+'市场格局':'Market landscape','攻守问题':'Lost & owned','对手拓词':'Rival mining','仅显示前 40 条——全部候选在「拓词选题」里勾选。':'Showing first 40 — check all candidates in Keyword mining.',
 '来自竞品词根的真实下拉词——用户已经在搜的替代/对比问法，最锋利的进攻选题。':'Real suggest terms from competitor roots — the alternative/comparison phrasings users already search. Your sharpest offensive topics.',
 '本期竞品词根没有扩出候选——重新拓词试试。':'No candidates from competitor roots this round — try re-running.',
 '按「需求上升 + 未提及 + 无内容」排序 —— 顶部就是选题池':'Sorted by rising demand + not mentioned + no content — top is your topic pool',
@@ -449,6 +450,7 @@ Object.assign(UI_D.ja,{
 '还没有拓词数据':'発掘データなし','候选都已入库——重新拓词看看有没有新词。':'候補はすべて追加済み——再発掘で新語を確認。',
 '先勾选要入库的题':'先に追加する質問をチェック','拓词扩题':'キーワード発掘','LLM 转写':'LLM 転写','模板转写':'テンプレ転写',
 '对手拓词 · 用户在主动找替代品':'競合発掘 · 代替を探しているユーザー',
+'市场格局':'市場勢力図','攻守问题':'攻防の質問','对手拓词':'競合発掘','仅显示前 40 条——全部候选在「拓词选题」里勾选。':'先頭 40 件のみ表示——全候補は「キーワード発掘」で。',
 '来自竞品词根的真实下拉词——用户已经在搜的替代/对比问法，最锋利的进攻选题。':'競合語根からの実サジェスト——ユーザーが既に検索している代替/比較の問い。最も鋭い攻めのトピック。',
 '本期竞品词根没有扩出候选——重新拓词试试。':'今期は競合語根から候補なし——再発掘を。',
 '按「需求上升 + 未提及 + 无内容」排序 —— 顶部就是选题池':'「需要上昇 + 言及なし + コンテンツなし」順——先頭がトピックプール',
@@ -972,14 +974,16 @@ function vCompetitors(){
         <td>${engTags(x)}</td>
         <td style="font-size:12.5px;color:var(--t500)">${(x.presence||0)>((h.subs.mention)||0)?'在你前面——看它被谁引用':'落后于你'}</td></tr>`).join('')}
     </tbody></table></div>`:'';
-  return `<div style="padding:32px 44px 72px;max-width:1280px">
-    ${head('现状 · 竞品对比',`${esc(topName)}赢在信源占位，不在产品`,
-      `同一批无提示采样下的对手出现率，国内（${NS.cn||0} 条）与海外（${NS.global||0} 条）分开算、分母各用各的。对手领先是可复制的——补上它们被引用的那类内容，你就能进同一批回答。竞品的引用份额与内容承接无法从外部测量，故不列。`)}
+  const mine=EXPD?(EXPD.terms||[]).map((t,i)=>({t,i})).filter(x=>x.t.kind==='competitor'):[];
+  const tab=ST.compTab||'market';
+  const tb=(k,l,n)=>`<button class="btn ${tab===k?'btn-secondary':'btn-ghost'}" style="font-size:12.5px;padding:4px 12px"
+      onclick="ST.compTab='${k}';render()"><span>${l}</span>${n?` <span class="bdg" style="margin-left:4px">${n}</span>`:''}</button>`;
+  const paneMarket=`
     ${tbl(T.cn||[],NS.cn||0,'国内市场')}
     ${tbl(T.global||[],NS.global||0,'海外市场')}
-    ${!flat.length?'<div class="muted" style="margin-top:22px">暂无竞品数据——先到「设置」配置竞品并跑完整一期。</div>':''}
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:26px">
+    ${!flat.length?'<div class="muted" style="margin-top:22px">暂无竞品数据——先到「设置」配置竞品并跑完整一期。</div>':''}`;
+  const paneBattle=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px">
       <div class="card elev" style="padding:18px">
         <div style="font-size:15px;font-weight:500">被抢走的问题</div>
         <div style="font-size:11.5px;color:var(--t600);margin-bottom:6px">你 0% 出现、对手稳定出现——优先级最高的选题池。</div>
@@ -997,15 +1001,15 @@ function vCompetitors(){
           <div style="font-size:11px;color:var(--t600)">你 ${pct(q.mine)} · ${q.samples} 样本 · 对手 0 出现</div>
         </div>`).join('')||'<div class="muted" style="font-size:12.5px">本期没有独占问题——先把「被抢走的问题」补上</div>'}
       </div>
-    </div>
-
-    <div class="card elev" style="padding:18px;margin-top:14px">
+    </div>`;
+  const paneMining=`
+    <div class="card elev" style="padding:18px;margin-top:18px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
         <div><div style="font-size:15px;font-weight:500">对手拓词 · 用户在主动找替代品</div>
           <div style="font-size:11.5px;color:var(--t600)">来自竞品词根的真实下拉词——用户已经在搜的替代/对比问法，最锋利的进攻选题。</div></div>
         <button class="btn btn-ghost" style="flex:none" onclick="${EXPD?'expandModal()':`runAction('expand')`}">${EXPD?'拓词选题':'开始拓词'}</button>
       </div>
-      ${(EXPD?(EXPD.terms||[]).map((t,i)=>({t,i})).filter(x=>x.t.kind==='competitor'):[]).slice(0,14).map(({t,i})=>`
+      ${mine.slice(0,40).map(({t,i})=>`
         <div class="row" style="gap:10px;padding:8px 0;box-shadow:inset 0 -1px 0 var(--line)">
           <span style="flex:1;font-size:13px">${esc(t.term)}
             <span style="font-size:11px;color:var(--t600)">· ${esc(t.root)} · ${mktLabel(t.market)}${t.new?' · <span style="color:var(--a300)">新词</span>':''}</span></span>
@@ -1013,7 +1017,17 @@ function vCompetitors(){
           ${t.in_bank?`<span class="muted" style="font-size:11.5px;flex:none">已入库</span>`
             :`<button class="btn btn-ghost" style="font-size:12px;flex:none" onclick="expAddIdx(${i})">入库</button>`}
         </div>`).join('')||`<div class="muted" style="font-size:12.5px;margin-top:8px">${EXPD?'本期竞品词根没有扩出候选——重新拓词试试。':'还没有拓词数据'}</div>`}
+      ${mine.length>40?`<div class="muted" style="font-size:11.5px;margin-top:8px">仅显示前 40 条——全部候选在「拓词选题」里勾选。</div>`:''}
+    </div>`;
+  return `<div style="padding:32px 44px 72px;max-width:1280px">
+    ${head('现状 · 竞品对比',`${esc(topName)}赢在信源占位，不在产品`,
+      `同一批无提示采样下的对手出现率，国内（${NS.cn||0} 条）与海外（${NS.global||0} 条）分开算、分母各用各的。对手领先是可复制的——补上它们被引用的那类内容，你就能进同一批回答。竞品的引用份额与内容承接无法从外部测量，故不列。`)}
+    <div class="row" style="margin-top:16px;gap:6px">
+      ${tb('market','市场格局',flat.length)}
+      ${tb('battle','攻守问题',(c.lost||[]).length+(c.won||[]).length)}
+      ${tb('mining','对手拓词',mine.length)}
     </div>
+    ${tab==='market'?paneMarket:tab==='battle'?paneBattle:paneMining}
   </div>`;
 }
 
