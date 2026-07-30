@@ -10,9 +10,9 @@
 
 ![License](https://img.shields.io/badge/license-MIT-9184d9) ![Python](https://img.shields.io/badge/python-3.9%2B-9184d9) ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-9184d9) ![Deps](https://img.shields.io/badge/deps-requests%20·%20bs4%20·%20lxml-9184d9)
 
-![Product demo](docs/demo.gif)
+![Product demo](docs/demo.ja.gif)
 
-🌐 [公式サイト geolook.cc](https://geolook.cc) · 🔍 [ライブデモ（読み取り専用）](https://geolook.cc/demo/) · 📹 [HD デモ動画 (mp4)](docs/demo.mp4) · 🖼 [全スクリーンショット](docs/screenshots/)
+🌐 [公式サイト geolook.cc](https://geolook.cc) · 🔍 [ライブデモ（読み取り専用）](https://geolook.cc/demo/) · 📹 [HD デモ動画 (mp4)](docs/demo.ja.mp4) · 🖼 [全スクリーンショット](docs/screenshots/)
 
 </div>
 

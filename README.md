@@ -10,9 +10,9 @@ English · [简体中文](README.zh-CN.md) · [日本語](README.ja.md)
 
 ![License](https://img.shields.io/badge/license-MIT-9184d9) ![Python](https://img.shields.io/badge/python-3.9%2B-9184d9) ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-9184d9) ![Deps](https://img.shields.io/badge/deps-requests%20·%20bs4%20·%20lxml-9184d9)
 
-![Product demo](docs/demo.gif)
+![Product demo](docs/demo.en.gif)
 
-🌐 [Website geolook.cc](https://geolook.cc) · 🔍 [Live demo (read-only)](https://geolook.cc/demo/) · 📹 [HD demo video (mp4)](docs/demo.mp4) · 🖼 [All screenshots](docs/screenshots/)
+🌐 [Website geolook.cc](https://geolook.cc) · 🔍 [Live demo (read-only)](https://geolook.cc/demo/) · 📹 [HD demo video (mp4)](docs/demo.en.mp4) · 🖼 [All screenshots](docs/screenshots/)
 
 <sub>Mirror while DNS propagates: [geolook.cc](https://geolook.cc) · [demo](https://geolook.cc/demo/)</sub>
 
