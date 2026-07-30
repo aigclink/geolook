@@ -427,6 +427,40 @@ const UI_RX={en:[
  [/^差 ([\d.]+) 倍$/,'$1 倍差'],
 ]};
 /* —— 各页说明文案补充 —— */
+/* —— 拓词功能文案 —— */
+Object.assign(UI_D.en,{
+'拓词选题':'Keyword mining','开始拓词':'Run mining','🔥 需求上升':'🔥 Rising demand','🔥 有搜索需求':'🔥 Search demand','重新拓词':'Re-run mining','加入问题库':'Add to question bank',
+'入库':'Add','已入库':'In bank','新词':'NEW','需求上升':'Rising demand','有搜索需求':'Search demand',
+'拓词选题 · 来自真实搜索需求':'Keyword mining · from real search demand',
+'词根：品牌 + 竞品 + 品类；来源：百度下拉（国内）+ Google 补全（海外）。勾选后入库，不自动加题。':'Roots: brand + competitors + category. Sources: Baidu suggest (CN) + Google autocomplete (Global). Check to add — nothing enters the bank automatically.',
+'还没有拓词数据':'No mining data yet','候选都已入库——重新拓词看看有没有新词。':'All candidates are already in the bank — re-run to look for new terms.',
+'先勾选要入库的题':'Check some questions first','拓词扩题':'Keyword mining','LLM 转写':'LLM-phrased','模板转写':'template-phrased',
+'对手拓词 · 用户在主动找替代品':'Rival mining · users actively searching for alternatives',
+'来自竞品词根的真实下拉词——用户已经在搜的替代/对比问法，最锋利的进攻选题。':'Real suggest terms from competitor roots — the alternative/comparison phrasings users already search. Your sharpest offensive topics.',
+'本期竞品词根没有扩出候选——重新拓词试试。':'No candidates from competitor roots this round — try re-running.',
+'按「需求上升 + 未提及 + 无内容」排序 —— 顶部就是选题池':'Sorted by rising demand + not mentioned + no content — top is your topic pool',
+'拓词选题：以品牌/竞品/品类为词根，拉百度下拉（国内）与 Google 补全（海外）的真实搜索词，按线索词归入七组并转写成问句。只产候选、入库必须手动勾选；每期快照 diff，首次出现的词标「需求上升」，参与选题排序但不进任何指标。':'Keyword mining: with brand/competitor/category roots, pull real search terms from Baidu suggest (CN) and Google autocomplete (Global), classify into the seven groups by cue words and rephrase as questions. Candidates only — adding to the bank always requires a manual check; each round is snapshot-diffed and first-seen terms are flagged “rising demand”, which affects topic ordering but never any metric.',
+'规则实现在 scripts/bootstrap.py（出题）、expand.py（拓词）、sample.py（采样与判定）、analytics.py（指标），本弹窗与代码同步维护。':'Implemented in scripts/bootstrap.py (question generation), expand.py (keyword mining), sample.py (sampling & judging), analytics.py (metrics). This panel is maintained in sync with the code.'});
+Object.assign(UI_D.ja,{
+'拓词选题':'キーワード発掘','开始拓词':'発掘を実行','🔥 需求上升':'🔥 需要上昇','🔥 有搜索需求':'🔥 検索需要あり','重新拓词':'再発掘','加入问题库':'質問バンクへ追加',
+'入库':'追加','已入库':'追加済み','新词':'新語','需求上升':'需要上昇','有搜索需求':'検索需要あり',
+'拓词选题 · 来自真实搜索需求':'キーワード発掘 · 実検索需要から',
+'词根：品牌 + 竞品 + 品类；来源：百度下拉（国内）+ Google 补全（海外）。勾选后入库，不自动加题。':'語根：ブランド + 競合 + カテゴリ。ソース：百度サジェスト（中国）+ Google オートコンプリート（海外）。チェックで追加——自動追加はしない。',
+'还没有拓词数据':'発掘データなし','候选都已入库——重新拓词看看有没有新词。':'候補はすべて追加済み——再発掘で新語を確認。',
+'先勾选要入库的题':'先に追加する質問をチェック','拓词扩题':'キーワード発掘','LLM 转写':'LLM 転写','模板转写':'テンプレ転写',
+'对手拓词 · 用户在主动找替代品':'競合発掘 · 代替を探しているユーザー',
+'来自竞品词根的真实下拉词——用户已经在搜的替代/对比问法，最锋利的进攻选题。':'競合語根からの実サジェスト——ユーザーが既に検索している代替/比較の問い。最も鋭い攻めのトピック。',
+'本期竞品词根没有扩出候选——重新拓词试试。':'今期は競合語根から候補なし——再発掘を。',
+'按「需求上升 + 未提及 + 无内容」排序 —— 顶部就是选题池':'「需要上昇 + 言及なし + コンテンツなし」順——先頭がトピックプール',
+'拓词选题：以品牌/竞品/品类为词根，拉百度下拉（国内）与 Google 补全（海外）的真实搜索词，按线索词归入七组并转写成问句。只产候选、入库必须手动勾选；每期快照 diff，首次出现的词标「需求上升」，参与选题排序但不进任何指标。':'キーワード発掘：ブランド/競合/カテゴリを語根に、百度サジェスト（中国）と Google オートコンプリート（海外）から実検索語を取得。手がかり語で 7 グループに分類し問句へ転写。候補のみ生成——追加は必ず手動チェック。毎期スナップショット差分を取り、初出語は「需要上昇」として表示（指標には一切不算入）。',
+'规则实现在 scripts/bootstrap.py（出题）、expand.py（拓词）、sample.py（采样与判定）、analytics.py（指标），本弹窗与代码同步维护。':'実装は scripts/bootstrap.py（出題）、expand.py（発掘）、sample.py（サンプリングと判定）、analytics.py（指標）。本パネルはコードと同期して保守。'});
+UI_RX.en.push(
+ [/^匹配 (\d+) 条下拉词：(.+)$/,'Matches $1 suggest terms: $2'],
+ [/^已加入 (\d+) 题$/,'Added $1 questions']);
+UI_RX.ja.push(
+ [/^匹配 (\d+) 条下拉词：(.+)$/,'一致サジェスト $1 件：$2'],
+ [/^已加入 (\d+) 题$/,'$1 問を追加']);
+
 Object.assign(UI_D.en,{
 '同一批无提示样本里，各品牌被提及的样本占比（含别名合并）。口径：只统计你与已配置竞品——没配置的品牌不会出现在这里，竞品清单越全分布越真实，缺了就到「设置 → 编辑当前品牌配置」补。':'Share of unprompted samples mentioning each brand (aliases merged). Scope: only you and configured competitors — unconfigured brands never appear here; the fuller your rival list, the truer the distribution. Add rivals in Settings → Edit brand config.',
 '纳米AI搜索（360）':'NanoAI Search (360)','百度 AI 搜索':'Baidu AI Search','豆包 App / 网页版（与方舟 API 结果不同，需分开采）':'Doubao App / web (differs from Ark API — sample separately)',
@@ -964,19 +998,97 @@ function vCompetitors(){
         </div>`).join('')||'<div class="muted" style="font-size:12.5px">本期没有独占问题——先把「被抢走的问题」补上</div>'}
       </div>
     </div>
+
+    <div class="card elev" style="padding:18px;margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+        <div><div style="font-size:15px;font-weight:500">对手拓词 · 用户在主动找替代品</div>
+          <div style="font-size:11.5px;color:var(--t600)">来自竞品词根的真实下拉词——用户已经在搜的替代/对比问法，最锋利的进攻选题。</div></div>
+        <button class="btn btn-ghost" style="flex:none" onclick="${EXPD?'expandModal()':`runAction('expand')`}">${EXPD?'拓词选题':'开始拓词'}</button>
+      </div>
+      ${(EXPD?(EXPD.terms||[]).map((t,i)=>({t,i})).filter(x=>x.t.kind==='competitor'):[]).slice(0,14).map(({t,i})=>`
+        <div class="row" style="gap:10px;padding:8px 0;box-shadow:inset 0 -1px 0 var(--line)">
+          <span style="flex:1;font-size:13px">${esc(t.term)}
+            <span style="font-size:11px;color:var(--t600)">· ${esc(t.root)} · ${mktLabel(t.market)}${t.new?' · <span style="color:var(--a300)">新词</span>':''}</span></span>
+          <span class="tag tag-dim" style="flex:none">${esc(t.group)}</span>
+          ${t.in_bank?`<span class="muted" style="font-size:11.5px;flex:none">已入库</span>`
+            :`<button class="btn btn-ghost" style="font-size:12px;flex:none" onclick="expAddIdx(${i})">入库</button>`}
+        </div>`).join('')||`<div class="muted" style="font-size:12.5px;margin-top:8px">${EXPD?'本期竞品词根没有扩出候选——重新拓词试试。':'还没有拓词数据'}</div>`}
+    </div>
   </div>`;
+}
+
+/* ===================== 拓词（真实搜索需求） ===================== */
+function demandTag(qid){
+  const d=EXPD&&EXPD.q_demand&&EXPD.q_demand[qid];
+  if(!d)return'';
+  const tip=`匹配 ${d.n} 条下拉词：${(d.terms||[]).join(' / ')}`;
+  return ` <span class="tag ${d.new?'tag-accent':'tag-dim'}" style="font-size:10px" title="${esc(tip)}">🔥 ${d.new?'需求上升':'有搜索需求'}</span>`;
+}
+function demandRank(qid){const d=EXPD&&EXPD.q_demand&&EXPD.q_demand[qid];return d?(d.new?2:1):0}
+function demandSort(qs){
+  if(!EXPD)return qs;
+  const idx=new Map(qs.map((q,i)=>[q.id,i]));
+  return qs.slice().sort((a,b)=>{
+    if((a.brand_probe?1:0)!==(b.brand_probe?1:0))return a.brand_probe?1:-1;
+    const d=demandRank(b.id)-demandRank(a.id);
+    return d||idx.get(a.id)-idx.get(b.id)});
+}
+function expandModal(){
+  if(!EXPD){
+    modal(`<h4 style="font-size:17px">拓词选题 · 来自真实搜索需求</h4>
+      <p class="muted" style="font-size:12.5px;margin-top:6px">词根：品牌 + 竞品 + 品类；来源：百度下拉（国内）+ Google 补全（海外）。勾选后入库，不自动加题。</p>
+      <p class="muted" style="font-size:12.5px">还没有拓词数据</p>
+      <div class="row" style="justify-content:flex-end;margin-top:12px">
+        <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+        <button class="btn btn-primary" onclick="closeModal();runAction('expand')">开始拓词</button></div>`);
+    return}
+  const cand=(EXPD.terms||[]).filter(t=>!t.in_bank);
+  const groups=['推荐','比较','替代','价格','风险','品牌验证','场景'];
+  const rows=groups.map(gp=>{
+    const ts=cand.filter(t=>t.group===gp);
+    if(!ts.length)return'';
+    return `<div style="font-size:12px;color:var(--a300);margin:12px 0 4px">${gp} · ${ts.length}</div>`+
+      ts.map(t=>`<label class="row" style="gap:8px;padding:6px 8px;border-radius:var(--r-sm);cursor:pointer;box-shadow:inset 0 -1px 0 var(--line);align-items:flex-start">
+        <input type="checkbox" class="expchk" data-q="${esc(t.question)}" data-g="${esc(t.group)}" data-m="${esc(t.market)}" style="margin-top:3px">
+        <span style="flex:1">
+          <span style="font-size:13px">${esc(t.question)}</span>
+          <span style="display:block;font-size:11px;color:var(--t600);margin-top:2px">${esc(t.term)} · ${esc(t.root)} · ${mktLabel(t.market)}${t.new?' · <span style="color:var(--a300)">新词</span>':''}</span>
+        </span></label>`).join('');
+  }).join('');
+  modal(`<h4 style="font-size:17px">拓词选题 · 来自真实搜索需求</h4>
+    <p class="muted" style="font-size:12px;margin-top:4px"><span>词根：品牌 + 竞品 + 品类；来源：百度下拉（国内）+ Google 补全（海外）。勾选后入库，不自动加题。</span>
+      <span>${EXPD.generated_at?esc(EXPD.generated_at)+' · ':''}</span><span>${EXPD.llm?'LLM 转写':'模板转写'}</span></p>
+    <div style="max-height:440px;overflow:auto;margin-top:6px">${rows||'<p class="muted" style="font-size:12.5px">候选都已入库——重新拓词看看有没有新词。</p>'}</div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-ghost" onclick="closeModal();runAction('expand')">重新拓词</button>
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="expAdd()">加入问题库</button></div>`);
+}
+function expAddIdx(i){
+  const t=EXPD&&EXPD.terms&&EXPD.terms[i];
+  if(t)expAdd([{text:t.question,group:t.group,market:t.market}]);
+}
+async function expAdd(items){
+  if(!items){
+    items=[...document.querySelectorAll('.expchk')].filter(c=>c.checked)
+      .map(c=>({text:c.dataset.q,group:c.dataset.g,market:c.dataset.m}));
+  }
+  if(!items.length){toast('先勾选要入库的题','err');return}
+  const r=await post('/api/questions-add',{slug:SLUG,items});
+  toast(r.ok?`已加入 ${r.added} 题`:(r.error||'保存失败'),r.ok?'':'err');
+  if(r.ok){closeModal();load(SLUG,true)}
 }
 
 /* ===================== 问题库 ===================== */
 function vQuestions(){
-  const qs=D.analytics.questions||[];
+  const qs=demandSort(D.analytics.questions||[]);
   const g=x=>qs.filter(q=>q.group===x).length;
   let probeSep=false;
   const rowsHtml=qs.map(q=>{
     const sep=q.brand_probe&&!probeSep?(probeSep=true,
       `<tr><td colspan="7" style="padding:16px 12px 6px;font-size:12px;color:var(--t500)">品牌认知 · 点名探测题（展示品牌被复述率，不计入提及率，也不参与上方选题排序）</td></tr>`):'';
     return sep+`<tr>
-        <td style="font-size:13.5px">${esc(q.text)}${q.brand_probe?' <span class="tag tag-dim" style="font-size:10px">点名</span>':''}</td>
+        <td style="font-size:13.5px">${esc(q.text)}${q.brand_probe?' <span class="tag tag-dim" style="font-size:10px">点名</span>':''}${q.brand_probe?'':demandTag(q.id)}</td>
         <td><span class="tag tag-neutral">${esc(q.group)}</span></td>
         <td style="font-size:12.5px;color:var(--t500)">${mktLabel(q.market)}</td>
         <td><span class="tag ${(q.mention||0)>0?'pill-good':'pill-warn'}">${q.mention==null?'未采样':pct(q.mention)}</span></td>
@@ -991,12 +1103,13 @@ function vQuestions(){
       <div class="row" style="flex:none">
         <button class="btn btn-ghost" onclick="showMethod()">生成规则</button>
         <button class="btn btn-secondary" onclick="editQuestions()">编辑问题库</button>
+        <button class="btn btn-secondary" onclick="expandModal()">拓词选题</button>
         <button class="btn btn-primary" onclick="runAction('bootstrap')">AI 补充选题</button>
       </div>
     </div>
     <div class="row" style="margin:18px 0 12px;font-size:12px;color:var(--t500)">
       ${['推荐','比较','替代','价格','风险','品牌验证','场景'].map(x=>`<span class="tag tag-dim">${x} ${g(x)}</span>`).join('')}
-      <span style="margin-left:auto">按「未提及 + 无内容」排序 —— 顶部就是选题池</span>
+      <span style="margin-left:auto">${EXPD?'按「需求上升 + 未提及 + 无内容」排序 —— 顶部就是选题池':'按「未提及 + 无内容」排序 —— 顶部就是选题池'}</span>
     </div>
     <div class="tbl"><table class="table"><thead><tr>
       <th>问题</th><th style="width:70px">类别</th><th style="width:70px">市场</th>
@@ -1019,6 +1132,7 @@ function showMethod(){
       ${li('要求真实口语问法：国内题像真人在 AI 里打的字；海外题是<b>英文原生问法</b>，不是中文题翻译。')}
       ${li('<b>关键纪律：绝大多数问题不出现品牌名</b>——考的是 AI 会不会主动想到你。只有「品牌验证」组点名，这类题带「点名」标记，单独归品牌认知，不计入提及率。')}
       ${li('生成后自动去重、校验分组与市场标记；问题库随时可人工编辑，改完重跑采样才生效。')}
+      ${li('拓词选题：以品牌/竞品/品类为词根，拉百度下拉（国内）与 Google 补全（海外）的真实搜索词，按线索词归入七组并转写成问句。只产候选、入库必须手动勾选；每期快照 diff，首次出现的词标「需求上升」，参与选题排序但不进任何指标。')}
     </ul>
 
     ${h('二、采样怎么跑')}
@@ -1042,7 +1156,7 @@ function showMethod(){
       ${li('<b>品牌提及分布 / 竞品最强引擎</b>：统计回答中出现的你与已配置竞品（别名并入），分母为对应范围的无提示样本数，同一样本提多次只算一次。<b>未配置的品牌不计入</b>——竞品清单和别名越全，分布越真实。')}
     </ul>
 
-    <p class="muted" style="font-size:11.5px;margin-top:10px">规则实现在 scripts/bootstrap.py（出题）、sample.py（采样与判定）、analytics.py（指标），本弹窗与代码同步维护。</p>
+    <p class="muted" style="font-size:11.5px;margin-top:10px">规则实现在 scripts/bootstrap.py（出题）、expand.py（拓词）、sample.py（采样与判定）、analytics.py（指标），本弹窗与代码同步维护。</p>
     <div class="row" style="justify-content:flex-end;margin-top:12px">
       <button class="btn btn-primary" onclick="closeModal()">知道了</button></div>`);
 }
@@ -1495,11 +1609,11 @@ function vWorkbench(){
 }
 function wbPickRows(){
   const f=(ST.wbFilter||'').toLowerCase();
-  const qs=(D.analytics.questions||[]).filter(q=>!q.brand_probe&&(!f||q.text.toLowerCase().includes(f)));
+  const qs=demandSort((D.analytics.questions||[]).filter(q=>!q.brand_probe&&(!f||q.text.toLowerCase().includes(f))));
   return qs.map(q=>`<div class="row" style="gap:10px;padding:9px 10px;border-radius:var(--r-md);cursor:pointer;box-shadow:inset 0 -1px 0 var(--line)"
       onmouseover="this.style.background='var(--deep)'" onmouseout="this.style.background=''"
       onclick="go('workbench',{wq:${esc(JSON.stringify(q.id))}})">
-    <span style="flex:1;font-size:13px">${esc(q.text)}</span>
+    <span style="flex:1;font-size:13px">${esc(q.text)}${demandTag(q.id)}</span>
     ${diagTag(q.diagnosis)}
     <span style="font-size:11.5px;color:${q.content==='已成稿'?'var(--a300)':'var(--t600)'};flex:none">${esc(q.content)}</span>
     <span class="muted" style="font-size:11px;flex:none">${mktLabel(q.market)}</span></div>`).join('')
@@ -1715,7 +1829,7 @@ async function importSheet(name){
 }
 
 /* ===================== 设置 ===================== */
-let KEYS=null,PROJECTS=null,SET_CFG=null,PUB=null,SET_HTML='';
+let KEYS=null,PROJECTS=null,SET_CFG=null,PUB=null,SET_HTML='',EXPD=null;
 async function vSettings(){
   if(!KEYS)KEYS=await api('/api/keys');
   if(!Array.isArray(KEYS))KEYS=[];
@@ -2176,6 +2290,7 @@ async function load(slug,keep){
     </div>`;
     return}
   const f=await api('/api/files/'+slug);D.samples_sheets=f.samples||[];D.deliveries=f.deliveries||[];D.reports=f.reports||[];
+  EXPD=await api('/api/expand/'+slug);if(!EXPD||EXPD.error||!EXPD.terms)EXPD=null;
   const jr=await api('/api/jobs?slug='+slug);RUNNING=jr.running||null;
   AS.tree=null;   // 资产可能被任务更新过
   const hh=(location.hash||'').replace('#','');  // 支持 #路由 深链直达

@@ -271,6 +271,11 @@ def cmd_cycle(a):
     report.run(a.slug)
 
 
+def cmd_expand(a):
+    import expand
+    expand.run(a.slug, use_llm=not a.no_llm)
+
+
 def cmd_plan(a):
     import tasks
 
@@ -398,6 +403,11 @@ def cmd_serve(a):
             S.run(a.slug, limit=a.limit)
         except Exception as e:  # noqa: BLE001
             G.info(f"采样跳过：{type(e).__name__}: {e}")
+    try:
+        import expand
+        expand.run(a.slug)
+    except Exception as e:  # noqa: BLE001
+        G.info(f"拓词跳过：{type(e).__name__}: {e}")
     G.info("═══ 4/7 生成工单与建设蓝图 ═══")
     tasks.build(a.slug)
     import blueprint
@@ -508,6 +518,12 @@ def main():
     s.add_argument("--max-pages", type=int, default=None, dest="max_pages")
     s.add_argument("--limit", type=int, default=None)
     s.set_defaults(func=cmd_cycle)
+
+    s = sub.add_parser("expand", help="拓词：百度下拉/Google suggest 扩出真实需求候选题")
+    s.add_argument("--slug", required=True)
+    s.add_argument("--no-llm", action="store_true", dest="no_llm",
+                   help="不调 LLM 转写问句，用模板兜底")
+    s.set_defaults(func=cmd_expand)
 
     s = sub.add_parser("plan", help="诊断结果 → 结构化工单（含验收标准）")
     s.add_argument("--slug", required=True)

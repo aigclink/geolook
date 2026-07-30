@@ -38,6 +38,8 @@ Four stages plus operations, all in one self-hosted dashboard:
 
 **Status** — Engine performance across 15 engines (10 automated via API + 5 manual sheets): mention rate, rank, citation share, what each engine actually cites, **sample replay** of raw answers, suspected-negative flags; **brand mention distribution** (you vs. competitors, per engine and aggregated); competitor tables with each rival's strongest engine one click away; a 7-category question bank where every question gets a **diagnosis type** (suspected-negative > competitor-dominated > absent > low-ranked).
 
+**Keyword mining** — expand the question bank from real search demand: Baidu suggest (CN) + Google autocomplete (Global) terms from brand/competitor/category roots (free public endpoints, no keys). Each round is snapshot-diffed to flag **rising demand** (affects topic ordering, never metrics); alternative/vs phrasings mined from competitor roots feed the Competitors page. Candidates only — adding to the bank is always a manual check.
+
 ![Engines](docs/screenshots-en/engines.png)
 
 **Diagnosis** — Site audit (robots / sitemap / llms.txt / accessibility / language coverage / extraction blocks, with click-through filtering straight to the fixing ticket); gap diagnosis (content → channels → facts); a **channel map of 19 channels** weighted by real citation-corpus data, each specifying what to build, how much, at what cadence, by whom; a **brand facts library** as the single source of truth that llms.txt, JSON-LD and content drafts are generated from.

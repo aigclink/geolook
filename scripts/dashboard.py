@@ -276,6 +276,9 @@ class Handler(BaseHTTPRequestHandler):
             if p.startswith("/api/factcheck/"):
                 slug = p[len("/api/factcheck/"):]
                 return self._json(G.read_json(G.project_dir(slug) / "factcheck.json", []) or [])
+            if p.startswith("/api/expand/"):
+                slug = p[len("/api/expand/"):]
+                return self._json(G.read_json(G.project_dir(slug) / "expand.json", {}) or {})
             if p.startswith("/api/publish/"):
                 import publish as P
                 slug = p[len("/api/publish/"):]
@@ -503,6 +506,38 @@ class Handler(BaseHTTPRequestHandler):
                         dist.pop(qid, None)
                 G.write_json(path, dist)
                 return self._json({"ok": True, "distribution": dist})
+
+            if p == "/api/questions-add":
+                slug = body.get("slug") or ""
+                items = body.get("items")
+                if not slug or not isinstance(items, list) or not items:
+                    return self._json({"ok": False, "error": "缺 slug / items"}, 400)
+                cfg = G.read_json(G.project_dir(slug) / "geo.json", {})
+                qs = cfg.setdefault("questions", [])
+                existing = {q.get("text", "").strip() for q in qs}
+                series = {"cn": 1, "global": 101, "both": 901}
+                used = {int(m.group(1)) for q in qs
+                        if (m := re.match(r"q(\d+)$", str(q.get("id", ""))))}
+                added = []
+                for it in items:
+                    text = str(it.get("text") or "").strip()
+                    mk = it.get("market") if it.get("market") in series else "cn"
+                    grp = str(it.get("group") or "场景").strip() or "场景"
+                    if not text or text in existing:
+                        continue
+                    n = series[mk]
+                    while n in used:
+                        n += 1
+                    used.add(n)
+                    q = {"id": f"q{n:03d}", "group": grp, "market": mk, "text": text,
+                         "source": "expand"}
+                    qs.append(q)
+                    existing.add(text)
+                    added.append(q)
+                if added:
+                    G.save_config(slug, cfg)
+                return self._json({"ok": True, "added": len(added),
+                                   "ids": [q["id"] for q in added]})
 
             if p == "/api/sample-import":
                 import sample as S

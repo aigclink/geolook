@@ -34,6 +34,8 @@ ACTIONS: dict[str, dict] = {
                  "desc": "从官网正文推出品牌事实、竞品、问题库", "slow": True},
     "deliverables":{"label": "出三份交付物", "args": [], "desc": "诊断报告 / 优化方案 / 执行方案"},
     "plan":     {"label": "生成工单", "args": [], "desc": "诊断结果 → 带验收标准的工单"},
+    "expand":   {"label": "拓词扩题", "args": ["--no-llm"],
+                 "desc": "下拉词扩出真实需求候选题（入库需手动勾选）"},
     "blueprint":{"label": "生成建设蓝图", "args": [], "desc": "在哪些平台建、建什么内容、覆盖度"},
     "generate": {"label": "生成资产", "args": ["--asset", "--draft", "--draft-limit"],
                  "desc": "llms.txt / JSON-LD / 片段 / 大纲"},
@@ -50,7 +52,7 @@ ACTIONS: dict[str, dict] = {
                  "desc": "抓取→体检→采样→工单→资产→报告→验收→交付", "slow": True},
 }
 
-FLAG_ARGS = {"--no-recrawl", "--draft", "--no-sample", "--skip-llm"}  # 布尔开关，无值
+FLAG_ARGS = {"--no-recrawl", "--draft", "--no-sample", "--skip-llm", "--no-llm"}  # 布尔开关，无值
 
 _lock = threading.Lock()
 _running: dict[str, str] = {}   # slug -> job_id

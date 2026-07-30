@@ -251,6 +251,7 @@ python3 scripts/geo.py status --slug <项目>     # 进度看板
 | `init` | 只建项目骨架，不跑流程 |
 | `crawl` / `audit` | 抓站 / 六维体检 |
 | `sample` / `sample-sheet` / `sample-import` | API 采样 / 导出人工采样表 / 回灌 |
+| `expand` | 拓词：百度下拉/Google 补全扩出真实需求候选题（`--no-llm` 用模板转写） |
 | `plan` | 诊断结果 → 带验收标准的工单 |
 | `generate` | 产出可部署资产（`--draft` 加 LLM 初稿） |
 | `report` | Markdown + 自包含 HTML 报告，含 delta 与大盘对照 |
