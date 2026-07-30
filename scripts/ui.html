@@ -198,6 +198,7 @@ const ULANG=(()=>{
   const s=localStorage.getItem('ulang');if(['zh','en','ja'].indexOf(s)>=0)return s;
   const l=(navigator.language||'').toLowerCase();
   return l.indexOf('zh')===0?'zh':l.indexOf('ja')===0?'ja':'en'})();
+document.documentElement.lang={zh:'zh-CN',en:'en',ja:'ja'}[ULANG]||'zh-CN';
 function setLang(l){localStorage.setItem('ulang',l);location.reload()}
 const UI_D={en:{
 '生成式引擎优化平台':'Generative Engine Optimization','当前品牌':'CURRENT BRAND','切换 ▾':'Switch ▾',
