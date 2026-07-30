@@ -73,6 +73,12 @@ textarea.input{min-height:90px;resize:vertical;font-family:ui-monospace,SFMono-R
 .seg-opt input{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
 .seg-opt:has(input:checked){color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .seg-opt:not(:has(input:checked)):hover{background:rgba(233,233,237,.07)}
+.tabs{display:inline-flex;background:var(--surface);border-radius:11px;padding:4px;gap:2px;box-shadow:var(--sh-sm)}
+.tab{border:0;background:none;color:var(--t500);font:500 13.5px/1 var(--font);padding:9px 18px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:color .12s,background .12s}
+.tab:hover{color:var(--t400)}
+.tab.on{background:var(--accent);color:#15172a}
+.tab .cnt{font-size:11px;padding:1px 7px;border-radius:99px;background:rgba(233,233,237,.10);color:var(--t500)}
+.tab.on .cnt{background:rgba(21,23,42,.22);color:#15172a}
 .row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
 .muted{color:var(--t600)} .soft{color:var(--t400)}
 pre.log{background:var(--deep);border-radius:var(--r-md);box-shadow:var(--sh-sm);padding:13px 15px;
@@ -976,8 +982,8 @@ function vCompetitors(){
     </tbody></table></div>`:'';
   const mine=EXPD?(EXPD.terms||[]).map((t,i)=>({t,i})).filter(x=>x.t.kind==='competitor'):[];
   const tab=ST.compTab||'market';
-  const tb=(k,l,n)=>`<button class="btn ${tab===k?'btn-secondary':'btn-ghost'}" style="font-size:12.5px;padding:4px 12px"
-      onclick="ST.compTab='${k}';render()"><span>${l}</span>${n?` <span class="bdg" style="margin-left:4px">${n}</span>`:''}</button>`;
+  const tb=(k,l,n)=>`<button class="tab ${tab===k?'on':''}"
+      onclick="ST.compTab='${k}';render()"><span>${l}</span>${n?`<span class="cnt">${n}</span>`:''}</button>`;
   const paneMarket=`
     ${tbl(T.cn||[],NS.cn||0,'国内市场')}
     ${tbl(T.global||[],NS.global||0,'海外市场')}
@@ -1022,7 +1028,7 @@ function vCompetitors(){
   return `<div style="padding:32px 44px 72px;max-width:1280px">
     ${head('现状 · 竞品对比',`${esc(topName)}赢在信源占位，不在产品`,
       `同一批无提示采样下的对手出现率，国内（${NS.cn||0} 条）与海外（${NS.global||0} 条）分开算、分母各用各的。对手领先是可复制的——补上它们被引用的那类内容，你就能进同一批回答。竞品的引用份额与内容承接无法从外部测量，故不列。`)}
-    <div class="row" style="margin-top:16px;gap:6px">
+    <div class="tabs" style="margin-top:18px">
       ${tb('market','市场格局',flat.length)}
       ${tb('battle','攻守问题',(c.lost||[]).length+(c.won||[]).length)}
       ${tb('mining','对手拓词',mine.length)}
