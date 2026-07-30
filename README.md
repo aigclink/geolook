@@ -12,7 +12,7 @@ English · [简体中文](README.zh-CN.md) · [日本語](README.ja.md)
 
 ![Product demo](docs/demo.en.gif)
 
-🌐 [Website geolook.cc](https://geolook.cc) · 🔍 [Live demo (read-only)](https://geolook.cc/demo/) · 📹 [HD demo video (mp4)](docs/demo.en.mp4) · 🖼 [All screenshots](docs/screenshots/)
+🌐 [Website geolook.cc](https://geolook.cc) · 🔍 [Live demo (read-only)](https://geolook.cc/demo/) · 📹 [HD demo video (mp4)](docs/demo.en.mp4) · 🖼 [All screenshots](docs/screenshots-en/)
 
 <sub>Mirror while DNS propagates: [geolook.cc](https://geolook.cc) · [demo](https://geolook.cc/demo/)</sub>
 
@@ -38,16 +38,16 @@ Four stages plus operations, all in one self-hosted dashboard:
 
 **Status** — Engine performance across 15 engines (10 automated via API + 5 manual sheets): mention rate, rank, citation share, what each engine actually cites, **sample replay** of raw answers, suspected-negative flags; **brand mention distribution** (you vs. competitors, per engine and aggregated); competitor tables with each rival's strongest engine one click away; a 7-category question bank where every question gets a **diagnosis type** (suspected-negative > competitor-dominated > absent > low-ranked).
 
-![Engines](docs/screenshots/engines.png)
+![Engines](docs/screenshots-en/engines.png)
 
 **Diagnosis** — Site audit (robots / sitemap / llms.txt / accessibility / language coverage / extraction blocks, with click-through filtering straight to the fixing ticket); gap diagnosis (content → channels → facts); a **channel map of 19 channels** weighted by real citation-corpus data, each specifying what to build, how much, at what cadence, by whom; a **brand facts library** as the single source of truth that llms.txt, JSON-LD and content drafts are generated from.
 
-![Channel map](docs/screenshots/channels.png)
+![Channel map](docs/screenshots-en/channels.png)
 
 **Action** — Structured tickets (rationale / owner / effort / window / acceptance criteria) with "first-measured → current → target" progress bars and automatic reopening on regressions; a **content workbench** (topic pool sorted by "not mentioned + no content", required extraction blocks and brand facts at hand, live citability pre-check, fabrication-risk lint for AI drafts, and a **distribution checklist** matching each piece to its target channels); **deploy assets** (llms.txt, JSON-LD, HTML snippets, each labeled with its destination, plus a DEPLOY.md runbook); **publishing** to GitHub / WordPress drafts / WeChat OA drafts / webhook — always manually confirmed.
 
-![Action plan](docs/screenshots/plan.png)
-![Workbench](docs/screenshots/workbench.png)
+![Action plan](docs/screenshots-en/plan.png)
+![Workbench](docs/screenshots-en/workbench.png)
 
 **Results** — Per-question before/after (all / CN / global tabs), task-level before/after, verification history; boss-ready one-pager, execution plan, and a complete client delivery package (HTML + CSV).
 

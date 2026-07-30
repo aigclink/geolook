@@ -12,7 +12,7 @@
 
 ![Product demo](docs/demo.ja.gif)
 
-🌐 [公式サイト geolook.cc](https://geolook.cc) · 🔍 [ライブデモ（読み取り専用）](https://geolook.cc/demo/) · 📹 [HD デモ動画 (mp4)](docs/demo.ja.mp4) · 🖼 [全スクリーンショット](docs/screenshots/)
+🌐 [公式サイト geolook.cc](https://geolook.cc) · 🔍 [ライブデモ（読み取り専用）](https://geolook.cc/demo/) · 📹 [HD デモ動画 (mp4)](docs/demo.ja.mp4) · 🖼 [全スクリーンショット](docs/screenshots-ja/)
 
 </div>
 
@@ -36,16 +36,16 @@
 
 **現状** — 15 エンジン（API 自動 10 + 手動シート 5）のエンジン別パフォーマンス：言及率、順位、引用シェア、各エンジンが実際に引用しているソース、生回答の**サンプルリプレイ**、ネガティブ疑いフラグ；**ブランド言及分布**（エンジン別・全体集計での自社 vs 競合）；競合ごとの最強エンジンにワンクリックで連動；全質問に**診断タイプ**（ネガティブ疑い > 競合支配 > 完全不在 > 低順位）が付く 7 カテゴリの質問バンク。
 
-![Engines](docs/screenshots/engines.png)
+![Engines](docs/screenshots-ja/engines.png)
 
 **診断** — サイト監査（robots / sitemap / llms.txt / アクセス可否 / 言語カバレッジ / 抽出ブロック。クリックで問題ページを絞り込み、修正チケットへ直行）；ギャップ診断（コンテンツ → チャネル → ファクト）；実引用コーパスで重み付けした **19 チャネルのマップ**（何を・どれだけ・どの頻度で・誰が作るかを明記）；llms.txt・JSON-LD・下書きの生成元となる**ブランドファクトライブラリ**（唯一の正）。
 
-![Channel map](docs/screenshots/channels.png)
+![Channel map](docs/screenshots-ja/channels.png)
 
 **実行** — 構造化チケット（根拠 / 担当 / 工数 / 期限 / 受け入れ基準）+「初回計測 → 現在 → 目標」プログレスバー、リグレッションは自動で再オープン；**コンテンツワークベンチ**（「未言及 + コンテンツなし」順のトピックプール、必須抽出ブロックとファクトを手元に、引用可能性のライブ事前チェック、AI 下書きの捏造リスク lint、各記事を配信先チャネルへ紐付ける**配信チェックリスト**）；**デプロイ資産**（llms.txt、JSON-LD、HTML スニペット、各ファイルに配置先を明記、DEPLOY.md 手順書付き）；GitHub / WordPress 下書き / WeChat 公式アカウント下書き / Webhook への**公開**——常に手動確認。
 
-![Action plan](docs/screenshots/plan.png)
-![Workbench](docs/screenshots/workbench.png)
+![Action plan](docs/screenshots-ja/plan.png)
+![Workbench](docs/screenshots-ja/workbench.png)
 
 **成果** — 質問別 before/after（全体 / 中国 / グローバルのタブ）、タスク別 before/after、検証履歴；経営層向けワンページャー、実行計画、クライアント納品パッケージ（HTML + CSV）。
 
