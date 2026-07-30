@@ -14,7 +14,7 @@ English · [简体中文](README.zh-CN.md) · [日本語](README.ja.md)
 
 🌐 [Website geolook.cc](https://geolook.cc) · 🔍 [Live demo (read-only)](https://geolook.cc/demo/) · 📹 [HD demo video (mp4)](docs/demo.mp4) · 🖼 [All screenshots](docs/screenshots/)
 
-<sub>Mirror while DNS propagates: [geolook-three.vercel.app](https://geolook-three.vercel.app) · [demo](https://geolook-three.vercel.app/demo/)</sub>
+<sub>Mirror while DNS propagates: [geolook.cc](https://geolook.cc) · [demo](https://geolook.cc/demo/)</sub>
 
 </div>
 
