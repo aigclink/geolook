@@ -31,6 +31,20 @@ class TestJsonIO(unittest.TestCase):
             self.assertEqual(G.read_json(p, default={"x": 1}), {"x": 1})
             self.assertIsNone(G.read_json(p))
 
+    def test_main_text_single_article_stays_focused(self):
+        soup = G.parse_html(
+            "<main><nav>menu</nav><article>the post body</article></main>")
+        self.assertEqual(G.main_text(soup), "the post body")
+
+    def test_main_text_multiple_articles_takes_whole_main(self):
+        soup = G.parse_html(
+            "<main><article>intro section</article>"
+            "<article>steps: 1 2 3</article>"
+            "<article>faq answers</article></main>")
+        text = G.main_text(soup)
+        for piece in ("intro section", "steps: 1 2 3", "faq answers"):
+            self.assertIn(piece, text)
+
     def test_project_lock_enter_exit(self):
         with tempfile.TemporaryDirectory() as d:
             slug = "locktest"

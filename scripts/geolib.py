@@ -279,7 +279,11 @@ def parse_html(html: str) -> BeautifulSoup:
 
 
 def main_text(soup: BeautifulSoup) -> str:
-    body = soup.find("article") or soup.find("main") or soup.body or soup
+    # 恰好一个 <article> 才当正文容器；多个 <article>（列表页/分节页）时取 <main>
+    # 整体，否则只保留第一节，数字/步骤/FAQ 全部丢失，正文评分被严重低估。
+    articles = soup.find_all("article")
+    body = (articles[0] if len(articles) == 1 else None) \
+        or soup.find("main") or soup.body or soup
     clone = BeautifulSoup(str(body), "lxml")
     for t in clone(_DROP_TAGS):
         t.decompose()
