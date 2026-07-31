@@ -64,6 +64,33 @@ class TestHowto(unittest.TestCase):
         self.assertTrue(r["blocks"]["操作步骤"])
 
 
+class TestJapaneseBlocks(unittest.TestCase):
+    def test_ja_definition_detected(self):
+        text = "GeoLookとは、生成エンジン最適化のための診断ツールです。" * 5
+        r = A.score_page(make_page(text=text), [])
+        self.assertTrue(r["blocks"]["定义"])
+
+    def test_ja_howto_detected(self):
+        text = "導入の手順：まずアカウントを作成し、次にサイトを登録します。" * 5
+        r = A.score_page(make_page(text=text), [])
+        self.assertTrue(r["blocks"]["操作步骤"])
+
+    def test_ja_faq_detected(self):
+        text = "よくある質問：料金はいくらですか。プランによって異なります。" * 5
+        r = A.score_page(make_page(text=text), [])
+        self.assertTrue(r["blocks"]["FAQ"])
+
+    def test_ja_numbers_detected(self):
+        text = "導入企業は 300社、月間 5億回 の処理、平均 24時間 で稼働開始。" * 3
+        r = A.score_page(make_page(text=text), [])
+        self.assertTrue(r["blocks"]["数字事实"])
+
+    def test_contact_page_is_functional(self):
+        r = A.score_page(make_page(url="https://example.com/contact", text=SPA_TEXT), [])
+        self.assertIn("LOW_CONTENT_PAGE", r["issue_codes"])
+        self.assertNotIn("SPA_SHELL", r["issue_codes"])
+
+
 class TestLanguage(unittest.TestCase):
     def test_japanese_detected(self):
         text = "これはテストページです。私たちは最高のサービスを提供します。詳細についてはお問い合わせください。" * 3

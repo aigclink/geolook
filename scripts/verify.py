@@ -26,7 +26,9 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlparse
 
+import audit as A
 import geolib as G
 import tasks as T
 
@@ -110,7 +112,10 @@ def check(task: dict, audit: dict, metrics: dict) -> tuple[bool | None, str, dic
                  "target": r, "op": "lte"}
 
         if expr == "pages.static_text":
-            bad = [u for u in aff if pages.get(u, {}).get("word_count", 0) < 120]
+            # 功能页（登录/联系页等）天然低词数，和 audit 用同一条规则豁免，
+            # 否则一张 SPA 空壳工单会被联系页永远卡在未达标
+            aff_real = [u for u in aff if not A.FUNC_PAGE.search(urlparse(u).path)]
+            bad = [u for u in aff_real if pages.get(u, {}).get("word_count", 0) < 120]
             return (not bad), f"{base - len(bad)}/{base} 页已能抓到正文", \
                 {"label": "抓不到正文的页面", "cur": len(bad), "target": 0, "op": "lte", "base": base}
         if expr == "pages.has_jsonld":

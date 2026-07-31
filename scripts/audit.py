@@ -19,23 +19,26 @@ import geolib as G
 
 # ------------------------------------------------------------ 抽取块识别
 
+# 三语站点三语判：只认中英表述会把日文页整体误判成「缺块」
 RE_DEFINITION = re.compile(
     r"(是一[款种个家类]|是指|指的是|定义为|全称[为是]|又称|简称为?|属于一[种类]"
-    r"|\bis an? \w+|\brefers to\b|\bis defined as\b|\bstands for\b)"
+    r"|とは|を指す|と呼ばれ|の略"
+    r"|\bis an? \w+|\brefers to\b|\bis defined as\b|\bstands for\b)", re.I
 )
 RE_NUMBER = re.compile(
     r"\d[\d,\.]*\s*(%|％|万|亿|千|倍|元|美元|人|家|个|天|小时|分钟|秒|次|条|款|年|月|"
+    r"件|社|名|回|億|円|時間|"
     r"percent|x\b|hours?|days?|users?|customers?)"
 )
-RE_COMPARE = re.compile(r"(对比|相比|区别|差异|优于|不如|竞品|替代|选型|哪个好|\bvs\.?\b|\bversus\b|\balternatives?\b)", re.I)
-RE_HOWTO = re.compile(r"(第[一二三四五六七八九十\d]+步|步骤\s*[一二三四五六七八九十\d]|操作流程|\bstep\s*\d|\bhow to\b)", re.I)
+RE_COMPARE = re.compile(r"(对比|相比|区别|差异|优于|不如|竞品|替代|选型|哪个好|比較|違い|\bvs\.?\b|\bversus\b|\balternatives?\b)", re.I)
+RE_HOWTO = re.compile(r"(第[一二三四五六七八九十\d]+步|步骤\s*[一二三四五六七八九十\d]|操作流程|手順|ステップ\s*\d|使い方|\bstep\s*\d|\bhow to\b)", re.I)
 # 「如何/怎么」只是弱信号，必须与列表结构共现才算操作步骤块（否则问句标题就送分）
 RE_HOWTO_SOFT = re.compile(r"(如何|怎么)")
-# 登录/注册/购物车等功能页天然低内容，不按 SPA 空壳 P0 误报
-FUNC_PAGE = re.compile(r"/(login|signin|signup|register|cart|checkout|account|auth)(/|$)", re.I)
-RE_FAQ = re.compile(r"(常见问题|常见疑问|问答|\bFAQ\b|^\s*[问Q][:：]|答[:：])", re.I | re.M)
+# 登录/注册/购物车/联系页等功能页天然低内容，不按 SPA 空壳 P0 误报
+FUNC_PAGE = re.compile(r"/(login|signin|signup|register|cart|checkout|account|auth|contact)(/|$)", re.I)
+RE_FAQ = re.compile(r"(常见问题|常见疑问|问答|よくある質問|\bFAQ\b|^\s*[问Q][:：]|答[:：])", re.I | re.M)
 RE_DATE = re.compile(r"(20\d{2}[-/年]\s?\d{1,2}[-/月]\s?\d{1,2}|更新[于时间]*[:：]?\s*20\d{2}|最后更新|发布于|\bupdated\b|\bpublished\b)", re.I)
-RE_AUTHOR = re.compile(r"(作者|撰文|编辑[:：]|\bauthor\b|\bby\s+[A-Z][a-z]+)", re.I)
+RE_AUTHOR = re.compile(r"(作者|撰文|编辑[:：]|著者|執筆|\bauthor\b|\bby\s+[A-Z][a-z]+)", re.I)
 
 AUTHORITY_SCHEMA = {
     "Organization", "Corporation", "Product", "SoftwareApplication", "Service",
