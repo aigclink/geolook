@@ -146,7 +146,10 @@ def read_jsonl(path: Path):
     if not p.exists():
         return []
     out = []
-    for line in p.read_text("utf-8").splitlines():
+    # 必须按 "\n" 切，不能用 splitlines()：后者还会在 U+2028/U+2029/U+0085/\v/\f
+    # 处断行，而 json.dumps 不转义这些字符，抓到含 U+2028 的页面就会把一条记录
+    # 劈成两半 → JSONDecodeError，整期体检中断。
+    for line in p.read_text("utf-8").split("\n"):
         line = line.strip()
         if line:
             out.append(json.loads(line))
