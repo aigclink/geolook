@@ -21,8 +21,21 @@ class DocumentLangCase(unittest.TestCase):
         self.assertIsNotNone(m, "ULANG 未同步到 document.documentElement.lang")
         mapping = m.group(1)
         self.assertIn("zh:'zh-CN'", mapping)
+        self.assertIn("'zh-tw':'zh-TW'", mapping)
         self.assertIn("en:'en'", mapping)
         self.assertIn("ja:'ja'", mapping)
+
+    def test_traditional_chinese_locale_is_available(self):
+        self.assertIn("['zh-tw','繁']", self.html)
+        self.assertIn("生成式引擎最佳化平台", self.html)
+        self.assertIn("UI_D['zh-tw']", self.html)
+
+    def test_traditional_character_map_is_balanced(self):
+        source = re.search(r"const ZHTW_FROM='([^']+)'", self.html)
+        target = re.search(r"const ZHTW_TO='([^']+)'", self.html)
+        self.assertIsNotNone(source)
+        self.assertIsNotNone(target)
+        self.assertEqual(len(source.group(1)), len(target.group(1)))
 
 
 if __name__ == "__main__":
