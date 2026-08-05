@@ -2483,9 +2483,18 @@ async function sampleModal(key){
       <span style="font-size:11.5px;color:var(--t600)">${esc(r.terminal||'')} · ${esc(r.sample_mode||'')} · ${(r.answer||'').length} 字</span></div>
     <div style="font-size:12px;color:var(--t600);margin:12px 0 3px">答案原文</div>
     <div style="max-height:210px;overflow:auto;background:var(--deep);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.65;white-space:pre-wrap;color:var(--t400)">${esc(r.answer||'')}</div>
-    ${cites.length?`<div style="font-size:12px;color:var(--t600);margin:12px 0 3px">引用（${cites.length}）</div>
+    ${cites.length?(()=>{
+      // 源站构成：这条答案的引用都来自哪些域名、各占多少——占比高的就是该题的主导信源
+      const dom={};cites.forEach(c=>{try{const h=new URL(c.url).hostname.replace(/^www\./,'');dom[h]=(dom[h]||0)+1}catch(e){}});
+      const own=((D.brand&&D.brand.site)||'').replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
+      const rows=Object.entries(dom).sort((a,b)=>b[1]-a[1]);
+      return `<div style="font-size:12px;color:var(--t600);margin:12px 0 3px">引用（${cites.length}）· 源站构成</div>
+      <div class="row" style="gap:5px;flex-wrap:wrap;margin-bottom:6px">
+        ${rows.map(([h,n])=>{const mine=own&&(h===own||h.endsWith('.'+own));
+          return `<span class="tag ${mine?'tag-accent':'tag-dim'}" style="font-size:11px" title="${mine?'你的官网':''}">${esc(h)} ×${n} · ${Math.round(n/cites.length*100)}%</span>`}).join('')}
+      </div>
       <div style="max-height:110px;overflow:auto;font-size:11.5px;line-height:1.7">
-        ${cites.map(c=>`<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="${esc(c.url)}" target="_blank" style="color:var(--a300)">${esc(c.url)}</a> <span style="color:var(--t600)">${esc(c.title||'')}</span></div>`).join('')}</div>`:''}
+        ${cites.map(c=>`<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="${esc(c.url)}" target="_blank" style="color:var(--a300)">${esc(c.url)}</a> <span style="color:var(--t600)">${esc(c.title||'')}</span></div>`).join('')}</div>`})():''}
     <div style="font-size:12px;color:var(--t600);margin:14px 0 4px">人工复核（改完立刻重算当日指标）</div>
     <div class="row" style="gap:8px;flex-wrap:wrap">
       <label class="small">品牌被提及
