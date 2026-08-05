@@ -86,6 +86,30 @@ def project(slug: str) -> dict:
 
     lint = G.read_json(pdir / "assets" / "drafts" / "_lint.json", None)
 
+    # 成稿发布状态：content/ 里的每篇成稿 ↔ publish.json 的成功记录。
+    # 行动计划页的「成稿发布」卡和问题库的「已发布」标记都吃这份数据。
+    content_pub = []
+    cdir = pdir / "content"
+    if cdir.exists():
+        import re as _re
+        pub_by_path: dict[str, list] = {}
+        for r in G.read_json(pdir / "publish.json", []) or []:
+            if r.get("ok"):
+                pub_by_path.setdefault(r.get("path", ""), []).append(
+                    {"platform": r.get("platform"), "platform_name": r.get("platform_name"),
+                     "url": r.get("url", ""), "at": r.get("at", "")})
+        for f in sorted(cdir.glob("*.md")):
+            if f.name == "facts.md":
+                continue
+            head = f.read_text("utf-8", "replace")[:800]
+            m = _re.search(r"(?m)^#\s*(.+)$", head)
+            content_pub.append({
+                "path": f.name,
+                "title": (m.group(1).strip() if m else f.name)[:80],
+                "qids": _re.findall(r"\bq\d{3}\b", head),
+                "published": pub_by_path.get(f"content/{f.name}", []),
+            })
+
     return {
         "slug": slug,
         "brand": cfg.get("brand", {}),
@@ -94,12 +118,14 @@ def project(slug: str) -> dict:
                   "grade_distribution": audit.get("grade_distribution", {}),
                   "language_coverage": audit.get("language_coverage", {}),
                   "site": audit.get("site", {}), "site_issues": audit.get("site_issues", []),
+                  "layers": audit.get("layers", []),
                   "block_gap": audit.get("block_gap", []),
                   "pages": sorted(audit.get("pages", []), key=lambda p: p["score"])[:40]},
         "tasks": td.get("tasks", []),
         "verify_history": verify_hist,
         "deliveries": deliveries,
         "lint": {"total": (lint or {}).get("total_issues", 0), "high": (lint or {}).get("high", 0)},
+        "content_pub": content_pub,
         "blueprint": G.read_json(pdir / "blueprint.json", None),
         "distribution": G.read_json(pdir / "distribution.json", {}),
         "question_count": len(cfg.get("questions", [])),
@@ -255,6 +281,44 @@ class Handler(BaseHTTPRequestHandler):
             if p.startswith("/api/workbench/"):
                 slug = p[len("/api/workbench/"):]
                 return self._json(workbench(slug, q.get("qid", [""])[0]))
+            if p.startswith("/api/samples/"):
+                import sample as S
+                slug = p[len("/api/samples/"):]
+                return self._json(S.list_samples(
+                    slug, date=q.get("date", [""])[0], platform=q.get("platform", [""])[0],
+                    qid=q.get("qid", [""])[0], flag=q.get("flag", [""])[0],
+                    limit=int(q.get("limit", ["300"])[0])))
+            if p.startswith("/api/sample/"):
+                import sample as S
+                slug = p[len("/api/sample/"):]
+                r = S.get_sample(slug, q.get("key", [""])[0])
+                return self._json(r or {"error": "找不到该样本"}, 200 if r else 404)
+            if p.startswith("/api/collect/queue/"):
+                # 浏览器插件的采样队列：按意图分组挑题 + 需人工采的平台
+                import sample as S
+                slug = p[len("/api/collect/queue/"):]
+                cfg = G.load_config(slug)
+                limit = int(q.get("limit", ["20"])[0])
+                intent = q.get("intent", [""])[0]
+                picked = [g for g in (q.get("groups", [""])[0] or "").split(",") if g.strip()]
+                if not picked and intent == "buyer":
+                    picked = sorted(S.BUYER_GROUPS)
+                allq = cfg.get("questions", [])
+                qs = [x for x in allq if not picked or x.get("group") in picked][:limit]
+                counts: dict[str, int] = {}
+                for x in allq:
+                    g2 = x.get("group") or "未分组"
+                    counts[g2] = counts.get(g2, 0) + 1
+                groups = [{"name": g2, "count": c,
+                           "buyer": g2 in S.BUYER_GROUPS} for g2, c in
+                          sorted(counts.items(), key=lambda kv: -kv[1])]
+                plats = [{"code": c, "label": lb, "market": mk}
+                         for c, (lb, mk) in S.MANUAL_ONLY.items()]
+                plats += [{"code": c, "label": s2["name"], "market": s2["market"]}
+                          for c, s2 in S.PROVIDERS.items() if not S.available(c)]
+                return self._json({"slug": slug, "brand": cfg.get("brand", {}).get("name", ""),
+                                   "questions": qs, "platforms": plats,
+                                   "groups": groups, "selected": picked})
             if p == "/api/keys":
                 import sample as S
                 rows = []
@@ -389,6 +453,28 @@ class Handler(BaseHTTPRequestHandler):
             if p == "/api/run":
                 job = J.start(body["slug"], body["action"], body.get("params") or {})
                 return self._json({"ok": True, "job": job})
+
+            if p.startswith("/api/sample/"):
+                import sample as S
+                slug = p[len("/api/sample/"):]
+                key = body.get("key") or ""
+                if not key:
+                    return self._json({"ok": False, "error": "缺少 key"}, 400)
+                res = S.patch_sample(slug, key, body.get("patch") or {})
+                return self._json(res, 200 if res.get("ok") else 400)
+
+            if p.startswith("/api/collect/"):
+                # 浏览器插件回传样本。服务只绑 127.0.0.1，来源即本机用户。
+                import sample as S
+                slug = p[len("/api/collect/"):]
+                records = body.get("records")
+                if not isinstance(records, list) or not records:
+                    return self._json({"ok": False, "error": "records 必须是非空数组"}, 400)
+                if len(records) > 200:
+                    return self._json({"ok": False, "error": "单次最多 200 条"}, 400)
+                with G.project_lock(slug):
+                    res = S.collect_import(slug, records)
+                return self._json(res, 200 if res.get("ok") else 400)
 
             if p.startswith("/api/job/") and p.endswith("/stop"):
                 jid = p[len("/api/job/"):-len("/stop")]
