@@ -142,12 +142,16 @@ python3 scripts/geo.py init --url <产品官网> --name <品牌名> --market bot
 ### 抓取 + 体检
 
 按六维打分：可抓取性 / 长度 / 结构 / **可抽取块** / 权威信号 / 对题性。
-读结果时先看四件事：
+`audit.json` 的 `layers` 字段按「访问 → 定向 → 理解 → 可引用」四层给出修复顺序：
+每层依赖上一层，**先修失败的最上游层**（详见 method.md 四层依赖模型）。
+读结果时先看五件事：
 
-1. **SPA 空壳页**（`word_count` 接近 0）——国内官网最常见致命伤，AI 抓取器看到的是空白
-2. **robots 有没有封 AI 抓取器**——封了就什么都别谈
-3. **`language_coverage` 中英是否对等**——做海外却没英文原生页直接 P0
-4. **`block_gap` 缺得最多的块**——内容工程第一优先级
+1. **`layers` 里最上游的 fail 层**——访问层失败时，下游的一切优化在引擎侧不可见
+2. **SPA 空壳页**（`word_count` 接近 0）——国内官网最常见致命伤，AI 抓取器看到的是空白
+3. **robots / WAF 有没有拦 AI 抓取器**——`ai_bots_blocked` 是 robots 封禁（含通配符组），
+   `ai_ua_blocked` 是换 AI 爬虫 UA 实测被 WAF/CDN 拒绝（浏览器里看不出来的那种）
+4. **`language_coverage` 中英是否对等**——做海外却没英文原生页直接 P0
+5. **`block_gap` 缺得最多的块**——内容工程第一优先级
 
 ### AI 答案采样
 
@@ -167,12 +171,28 @@ python3 scripts/geo.py init --url <产品官网> --name <品牌名> --market bot
 Key 放项目根目录 `.env`（已 gitignore，权限 600），脚本自动加载。
 
 没有公开联网 API 的——国内纳米AI搜索/百度AI/豆包 App，海外 ChatGPT 网页版/
-Claude 网页版——走人工或浏览器采样：
+Claude 网页版/Google AI Overviews——走人工或浏览器采样：
 
 ```bash
-python3 scripts/geo.py sample-sheet --slug <项目>
+python3 scripts/geo.py sample-sheet --slug <项目>                    # 全量采样表
+python3 scripts/geo.py sample-sheet --slug <项目> --intent buyer --limit 20   # 每周买家题轻量核查
 python3 scripts/geo.py sample-import --slug <项目> --file <采样表>
 ```
+
+更快的路径是配套的 **Chrome 采样助手插件**（`extension/`，README 有安装说明）：
+侧栏载入周检队列 → 填入问题 → 一键提取答案与引用 → 回传看板自动入库。
+手动模式回车由人按（零合规风险，交付给客户用这个）；「自动跑队列」需显式开启，
+会代你发送，仅限自己账号小批量、人在场、撞验证码即停——README 里写明了风险边界。
+数据只进本机 127.0.0.1，无后台采集、无遥测。
+
+**意图分组**贯穿三处：问题库页每组一张卡（该组提及率、失守题数、无内容题数），点卡片筛选；
+插件按分组挑队列并分节排列；周检表 `--intent buyer` 取的也是同一批组。
+分三类看——**买家意图**（推荐/比较/替代/价格，离成交最近，优先补）、
+**需求教育**（场景/风险）、**探测**（品牌验证，点名题不计入提及率）。
+
+采样进来后到看板 **样本库**（现状 → 样本库）复核：机器判读是正则，品牌名撞词、
+否定语境、竞品别名都可能误判。逐条纠正提及/位次/竞品，改完立刻重算当日指标，
+纠正过的样本打 `manual_override`，重跑不会覆盖人工结论。
 
 **口径纪律**（详见 `method.md` 第 4 节）：
 

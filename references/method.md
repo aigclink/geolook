@@ -37,14 +37,47 @@ Google `12.06`、ChatGPT 只有 `6.88`；但 ChatGPT 单条引用的平均影响
 
 总分 100，六个维度。每条阈值都对应下面的实测数字。
 
+### 四层依赖模型（修复顺序判据）
+
+六维分数回答「哪里差」，四层模型回答「先修哪个」（框架来自 GeoReady《The GEO Readiness Manual》
+公开预览章节，与我们的采样观察一致）：
+
+| 层 | 问题 | 对应检查 |
+|---|---|---|
+| 访问 | 抓取器能拿到内容吗 | robots 封禁 / WAF-UA 差异封锁 / noindex（meta+响应头）/ SPA 空壳 |
+| 定向 | 找得到、认得清每个 URL 吗 | sitemap（robots 里声明）/ canonical / llms.txt 及其链接有效性 |
+| 理解 | 机器读得懂这是什么实体吗 | JSON-LD / schema 与可见内容一致 / 目标市场原生语言 |
+| 可引用 | 有值得引用的具体内容吗 | 六维里的长度、结构、抽取块、权威、对题 |
+
+**每层依赖上一层：访问失败时，下游层的任何优化在引擎侧都不可见。** 一张有完美 schema
+和高质量内容的页面，如果 WAF 把 GPTBot 挡在门外，等于不存在。工单排序必须从失败的最上游层开始。
+`audit.json` 的 `layers` 字段输出每层状态与 `blocked_by`。
+
 ### 可抓取性（15）
 进不了候选池，后面全是零。
 
 - HTTP 200；非 200（含 202/3xx）扣分
-- 无 `noindex`
-- **静态 HTML 里要有正文**。纯前端渲染的 SPA 对多数 AI 抓取器等于空白页——这是国内官网最常见的致命伤
-- 有 canonical
-- 站点级：`robots.txt` 不封 `GPTBot / OAI-SearchBot / ClaudeBot / PerplexityBot / Bytespider / Baiduspider / Google-Extended`；有 `sitemap.xml`；建议加 `/llms.txt`
+- 无 `noindex`——meta 与 **X-Robots-Tag 响应头**都查。头级 noindex 在页面源码里看不到，
+  常是 CDN/中间件全局注入，最容易带病上线
+- **静态 HTML 里要有正文**。默认假设 AI 抓取器不渲染 JS：Googlebot 会渲染但有延迟队列，
+  PerplexityBot / ClaudeBot / GPTBot 按纯 HTML 抓取对待（GEO Readiness Manual 的分爬虫结论）。
+  纯前端渲染的 SPA 对多数 AI 抓取器等于空白页——这是国内官网最常见的致命伤
+- 有 canonical，且指向本页而不是别处
+- 站点级：`robots.txt` 不封 `GPTBot / OAI-SearchBot / ClaudeBot / PerplexityBot / Bytespider / Baiduspider / Google-Extended`；有 `sitemap.xml`（并在 robots 里声明）；建议加 `/llms.txt`
+
+**robots.txt 必须按 RFC 9309 语义判，逐行正则会漏三种真实封禁**（`geolib.robots_parse/robots_decision`）：
+
+1. `User-agent: * / Disallow: /` 会封掉**所有没有专属组的 AI 爬虫**——最常见的"无意封禁"
+2. 多个 `User-agent` 行共享一组规则，逐行正则会把第一个 UA 判成空规则
+3. specificity 不看顺序：专属组存在时通配符组整组失效，`User-agent: GPTBot / Allow: /`
+   会让 GPTBot 无视通配符组里的任何 `Disallow`
+
+**robots 放行 ≠ 真放行。** WAF/CDN（Cloudflare Bot Fight、阿里云 WAF 等）可能对 AI 爬虫的
+UA 单独返回 403，浏览器里一切正常，站长自己看不出来。`crawl.py` 用 GPTBot / ClaudeBot /
+PerplexityBot / Bytespider 的真实 UA 抓一次首页做差异探测（`ai_ua_probe`）。
+
+**llms.txt 只有指向可抓取的有效页面才有意义。** 指向 404 或被 robots 封禁的路径等于递给
+AI 一份坏地图，`crawl.py` 抽样验证其中链接（`llms_txt_check`）。
 
 ### 内容长度（15）
 > Top 四分位页面平均 **1,943 词**，Bottom 四分位只有 **170 词**，差 `11.4x`。
@@ -131,6 +164,19 @@ Google `12.06`、ChatGPT 只有 `6.88`；但 ChatGPT 单条引用的平均影响
 - 归因默认写成"**观察相关**"。要提高置信度，必须有基线窗口、观察窗口、对照 Prompt、竞品对照和外部事件记录。
 - **永远不能承诺"某平台一定会引用某页"**，只能承诺提升可发现性、可验证性、可抽取性。
 
+Web 手动采样纪律（`sample-sheet` 表头同款，违反任何一条不算 A 级证据）：
+
+- **采样环境必须记录，且不同环境不混算**（与「API ≠ Web、Web ≠ App」同一条纪律）。
+  四档：`sandbox` 一次性沙箱（A 级，`extension/sandbox.sh` 起的无历史无 Cookie 环境，
+  免登录引擎首选）／`incognito` 无痕未登录（A 级）／`clean_profile` 专用采样 Profile
+  ——只用于采样、从不搜自己品牌、关掉记忆与个性化（A 级，适用必须登录的豆包/Kimi/元宝/ChatGPT）／
+  `personal` 个人日常账号（**自动降级 D 级待复核**，测的是「AI 对你的画像」，不能当可见性证据）。
+  插件回传时随样本写入 `session_mode`，样本库里逐条可见
+- 每题**新开对话**，不连续追问——上下文会给后面的答案带偏置
+- 复制完整答案原文（含引用链接），没提到品牌也照样记录——「没提到」正是最重要的数据
+- 轻量周检节奏：`sample-sheet --intent buyer --limit 20`，只查买家意图题
+  （价格/推荐/比较/替代），每周一次，成本 ≈ 半小时/引擎；全量题库留给每期正式采样
+
 ---
 
 ## 5. 官网的真实位置：它是事实源，不是引用源
@@ -173,3 +219,37 @@ CN-GEO 实算（187,818 条去重引用）：
 
 不要把 SEO 排名、官网流量或品牌知名度直接等同于 GEO 优先级。
 不要把"官网有这个页面"等同于"AI 能准确引用"。
+
+## 7. 执行的保护性纪律（风险分级）
+
+优先级说「多重要」，**风险说「动手时多小心」，两者独立**——解封 robots 是 P0 也是
+高风险，改错一行封掉全站。每条工单带 `risk` 字段（`tasks.risk_of`）：
+
+| 级别 | 含义 | 纪律 |
+|---|---|---|
+| 低风险快速优化 | 纯新增资产 / 站外动作，不改已有页面 | 先做这批建立信任，随时可撤 |
+| 需观察的内容调整 | 改已有页面内容、新建内容 | 不改 URL、不改已有排名页的核心主题；发布后 **7/14/28 天**各复核一次 |
+| 高风险技术改造 | 动 robots / WAF / noindex / 渲染架构 | 修改前备份、单独排期、小批量发布、留回滚；发布后立刻重跑体检 |
+
+通用铁律（借自成熟 SEO 审计纪律，GEO 同样适用）：
+
+- **先保护已有 URL、canonical、标题和历史权重，再考虑新增**——GEO 建设不能以毁掉
+  已有搜索资产为代价
+- 禁止一次性批量修改大量已收录页面；每批小量发布并记录修改前数据（工单的 `baseline_count`）
+- 数据没有改善时先分析原因，不要盲目继续批量改动
+- 反向防护同样重要：**sitemap 只装值得被引用的规范页**，站内搜索/带参/翻页 URL 用
+  robots 通配符挡掉（`Disallow: /*?session=`、`Disallow: /search?`）——低价值页进了
+  检索索引会稀释实体表征
+- 多语言站必须 hreflang 互指，否则各语言版本被当重复内容、跨市场检索挂错语言页
+
+## 8. 归因：从「被引用」到「带来业务结果」
+
+只测可见性不测转化，监测就是汇报表演。链路与配置见 references/attribution.md：
+
+```
+采样测「答案里有没有你」 → referrer/UTM 测「AI 带来多少会话」 → 转化事件+来源快照测「值多少钱」
+```
+
+口径纪律：App 内打开常不带 referrer，**测到的 AI 流量是下界**，报告写
+「可归因的 AI 会话 ≥ N」；AI 来源会话通常量小意图深，先看转化率不看会话数；
+公开内容不堆 UTM——带参 URL 被引用会稀释规范 URL 的引用份额。
