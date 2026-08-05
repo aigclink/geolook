@@ -685,7 +685,7 @@ const NAV=[
  {t:'诊断 · 为什么是这样',items:[['siteaudit','站点体检'],['gaps','差距诊断'],['channels','阵地地图'],['facts','品牌事实库']]},
  {t:'提升 · 该做什么',items:[['plan','行动计划'],['workbench','内容工作台'],['assets','部署资产']]},
  {t:'成效 · 做了有没有用',items:[['verify','效果验收'],['report','报告与交付']]},
- {t:'账号',items:[['settings','设置']]},
+ {t:'账号',items:[['settings','设置'],['publishing','发布渠道']]},
 ];
 function badge(k){
   if(!D||!D.analytics)return'';
@@ -1773,11 +1773,11 @@ async function pubModal(rel){
       <input type="checkbox" class="pub-ch" value="${x.code}" ${ok?'':'disabled'} ${ok&&sel.includes(x.code)?'checked':''} style="accent-color:var(--accent)">
       <span style="flex:1;font-size:13px">${esc(x.name)}<span class="muted" style="font-size:11px;margin-left:6px">${esc(x.note)}</span></span>
       ${done?`<span style="font-size:11px;color:var(--a300)" title="${esc(done.url||'')}">✓ 已发 ${esc((done.at||'').slice(5,10))}</span>`:''}
-      ${ok?'':`<button class="btn btn-ghost" style="font-size:11.5px;padding:2px 8px" onclick="closeModal();go('settings')">缺凭证 · 去配置</button>`}
+      ${ok?'':`<button class="btn btn-ghost" style="font-size:11.5px;padding:2px 8px" onclick="closeModal();go('publishing')">缺凭证 · 去配置</button>`}
     </label>`}).join('')}
     <div id="pubprog" style="margin-top:8px"></div>
     <div class="row" style="justify-content:flex-end;margin-top:12px">
-      <button class="btn btn-ghost" style="margin-right:auto" onclick="closeModal();go('settings')">渠道配置</button>
+      <button class="btn btn-ghost" style="margin-right:auto" onclick="closeModal();go('publishing')">渠道配置</button>
       <button class="btn btn-secondary" onclick="closeModal()">关闭</button>
       <button class="btn btn-primary" onclick="doPublishSel(${esc(JSON.stringify(rel))})">发布到已选渠道</button></div>`);
 }
@@ -1967,13 +1967,57 @@ async function importSheet(name){
 
 /* ===================== 设置 ===================== */
 let KEYS=null,PROJECTS=null,SET_CFG=null,PUB=null,SET_HTML='',EXPD=null;
+/* ===================== 发布渠道（账号 · 独立页） ===================== */
+async function vPublishing(){
+  if(!PUB)PUB=await api('/api/publish/'+SLUG);
+  const pubs=(PUB&&PUB.publishers)||[];
+  const recs=((PUB&&PUB.records)||[]).slice().reverse();
+  const cp=D.content_pub||[];
+  const pend=cp.filter(f=>!(f.published||[]).length);
+  const ready=pubs.filter(x=>!x.missing.length).length;
+  return `<div style="padding:32px 44px 72px;max-width:1080px">
+    ${head('账号 · 发布渠道','把成稿发到你自己的渠道',
+      '凭证写 .env（已 gitignore）；<b>发布永远由你手动点击，没有自动发布</b>；公众号 / WordPress 只建草稿，在各自后台确认后才对外。')}
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0 16px">
+      <div class="card elev" style="padding:15px;gap:3px"><div style="font-size:11.5px;color:var(--t500)">就绪渠道</div>
+        <div style="font-size:26px;font-weight:500;${ready?'color:var(--accent)':''}">${ready}<span style="font-size:13px;color:var(--t600)"> / ${pubs.length}</span></div></div>
+      <div class="card elev" style="padding:15px;gap:3px"><div style="font-size:11.5px;color:var(--t500)">成稿 / 已发布</div>
+        <div style="font-size:26px;font-weight:500">${cp.length}<span style="font-size:13px;color:var(--t600)"> / ${cp.length-pend.length} 已发</span></div></div>
+      <div class="card elev" style="padding:15px;gap:3px;cursor:pointer" onclick="pendPubModal()" title="打开待发布清单">
+        <div style="font-size:11.5px;color:var(--t500)">待发布</div>
+        <div style="font-size:26px;font-weight:500;color:${pend.length?'var(--a300)':'var(--text)'}">${pend.length}<span style="font-size:12px;color:var(--a300)"> 清单 →</span></div></div>
+    </div>
+
+    <h4 style="font-size:16px;margin:20px 0 8px">渠道</h4>
+    <div class="card elev" style="padding:6px 18px">
+      ${pubs.map((x,i)=>`<div class="row" style="padding:11px 0;box-shadow:inset 0 -1px 0 var(--line)">
+        <span class="dot" style="background:${x.missing.length?'#595d6c':'var(--a400)'}"></span>
+        <span style="flex:1;font-size:13.5px">${esc(x.name)}
+          <div class="muted" style="font-size:11.5px;margin-top:1px">${esc(x.note)}</div></span>
+        <span style="font-size:11.5px;color:${x.missing.length?'var(--t600)':'var(--a300)'}">${x.missing.length?('缺 '+x.missing.map(esc).join('、')):'已就绪'}</span>
+        <button class="btn ${x.missing.length?'btn-secondary':'btn-ghost'}" style="font-size:12px;padding:3px 10px" onclick="editPub(${i})">配置</button></div>`).join('')}
+    </div>
+
+    <h4 style="font-size:16px;margin:24px 0 8px">发布记录${recs.length?`<span style="font-size:11.5px;color:var(--t600);font-weight:400"> · 共 ${recs.length} 条</span>`:''}</h4>
+    ${recs.length?`<div class="tbl"><table class="table"><thead><tr>
+      <th style="width:130px">时间</th><th style="width:130px">渠道</th><th>内容</th><th style="width:70px">结果</th><th style="width:220px">落点</th></tr></thead><tbody>
+      ${recs.slice(0,50).map(r=>`<tr>
+        <td style="font-size:12px;color:var(--t500)">${esc((r.at||'').slice(0,16).replace('T',' '))}</td>
+        <td style="font-size:12.5px">${esc(r.platform_name)}</td>
+        <td style="font-size:12.5px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.path||'')}">${esc(r.title||r.path||'')}</td>
+        <td>${r.ok?'<span class="tag tag-accent" style="font-size:10.5px">成功</span>':`<span class="tag tag-dim" style="font-size:10.5px" title="${esc(r.error||'')}">失败</span>`}</td>
+        <td style="font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.url?`<a href="${esc(r.url)}" target="_blank" style="color:var(--a300)">${esc(r.url)}</a>`:`<span class="muted">${esc(r.note||r.error||'—')}</span>`}</td></tr>`).join('')}
+    </tbody></table></div>`:'<div class="muted" style="font-size:12.5px">还没有发布记录——到「行动计划 → 成稿发布」或内容工作台发布第一篇。</div>'}
+  </div>`;
+}
+
 async function vSettings(){
   if(!KEYS)KEYS=await api('/api/keys');
   if(!Array.isArray(KEYS))KEYS=[];
   if(!PROJECTS)PROJECTS=await api('/api/projects');
   if(!Array.isArray(PROJECTS))PROJECTS=[];
   if(!SET_CFG)SET_CFG=await api('/api/config/'+SLUG);
-  if(!PUB)PUB=await api('/api/publish/'+SLUG);
   const mon=(SET_CFG&&SET_CFG.monitor)||{},monCur=mon.every_days||0;
   setTimeout(()=>{if(LASTJOB&&!RUNNING)showLog(LASTJOB)},0);
   const acts=['crawl','audit','bootstrap','sample','sample-sheet','plan','blueprint','generate','lint','report','deliverables','verify','deliver'];
@@ -2057,17 +2101,9 @@ async function vSettings(){
         <pre class="log" id="joblog" style="max-height:260px"></pre>
       </div>
     </div>
-    <div class="card elev" style="padding:18px;gap:10px;margin-top:14px">
-      <div><div style="font-size:15px;font-weight:500">发布渠道</div>
-        <div style="font-size:11.5px;color:var(--t600)">把成稿从「内容工作台」发到你自己的渠道。凭证写 .env；<b>发布永远由你手动点击，没有自动发布</b>；公众号 / WordPress 只建草稿，在各自后台确认后才对外。</div></div>
-      ${((PUB&&PUB.publishers)||[]).map((x,i)=>`<div class="row" style="padding:6px 0;box-shadow:inset 0 -1px 0 var(--line)">
-        <span class="dot" style="background:${x.missing.length?'#595d6c':'var(--a400)'}"></span>
-        <span style="flex:1;font-size:13px">${esc(x.name)}<span class="muted" style="font-size:11px;margin-left:6px">${esc(x.note)}</span></span>
-        <span style="font-size:11.5px;color:var(--t600)">${x.missing.length?('缺 '+x.missing.map(esc).join('、')):'已就绪'}</span>
-        <button class="btn btn-ghost" style="font-size:12px;padding:2px 8px" onclick="editPub(${i})">配置</button></div>`).join('')}
-      ${(PUB&&(PUB.records||[]).length)?`<div style="font-size:12px;color:var(--t500);margin-top:4px">最近发布：
-        ${PUB.records.slice(-3).reverse().map(r=>`<div style="padding:2px 0;color:var(--t400)">${r.ok?'✓':'✗'} ${esc((r.at||'').slice(0,16).replace('T',' '))} ${esc(r.platform_name)} · ${esc(r.title)} ${r.url?`<a href="${esc(r.url)}" target="_blank" style="color:var(--a300)">链接</a>`:esc(r.note||r.error||'')}</div>`).join('')}</div>`:''}
-    </div>
+    <div class="row" style="margin-top:14px;font-size:12.5px;color:var(--t500)">
+      发布渠道（GitHub / WordPress / 公众号 / Webhook）已独立成页 →
+      <button class="btn btn-ghost" style="font-size:12.5px;color:var(--a300)" onclick="go('publishing')">打开发布渠道</button></div>
     <p class="muted" style="font-size:12px;margin-top:16px">团队与权限：单机自托管版，无账号体系；服务只绑定 127.0.0.1。多人使用需自行加反向代理与认证。</p>
   </div>`;
 }
@@ -2556,7 +2592,7 @@ async function delSample(key){
 const VIEWS={overview:vOverview,engines:vEngines,competitors:vCompetitors,questions:vQuestions,
   samples:vSamples,siteaudit:vSiteAudit,assets:vAssets,
   gaps:vGaps,channels:vChannels,facts:vFacts,plan:vPlan,workbench:vWorkbench,
-  verify:vVerify,report:vReport,settings:vSettings,onboard:vOnboard};
+  verify:vVerify,report:vReport,settings:vSettings,publishing:vPublishing,onboard:vOnboard};
 async function render(){
   renderSide();
   const fn=VIEWS[R]||vOverview;
