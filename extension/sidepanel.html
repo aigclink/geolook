@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<style>
+:root{--bg:#161826;--surface:#232532;--deep:#1b1d2b;--text:#e9e9ed;--t400:#b2b6ca;--t500:#9397ab;--t600:#75798c;
+  --accent:#9184d9;--a300:#d2cefd;--a700:#5d5294;--a900:#2b2741;--line:rgba(233,233,237,.08)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:13px/1.5 Inter,system-ui,"PingFang SC",sans-serif;padding:12px}
+h1{font-size:15px;font-weight:600;margin:0 0 2px}
+.muted{color:var(--t600);font-size:11px}
+.card{background:var(--surface);border-radius:10px;padding:10px 12px;margin-top:10px;box-shadow:0 0 0 1px #3f424d}
+.row{display:flex;gap:6px;align-items:center}
+input,select{background:var(--deep);color:var(--text);border:1px solid #3f424d;border-radius:6px;padding:5px 8px;font:inherit;width:100%}
+button{background:var(--a900);color:var(--a300);border:1px solid var(--a700);border-radius:6px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
+button.primary{background:var(--accent);color:#16121f;border-color:var(--accent);font-weight:500}
+button.ghost{background:transparent;border-color:transparent;color:var(--t500)}
+button:disabled{opacity:.45;cursor:default}
+.warn{background:#2e2415;border:1px solid #6b5320;color:#e8c374;border-radius:8px;padding:8px 10px;font-size:12px;margin-top:10px}
+.okline{color:var(--a300)}
+#qlist{margin-top:6px;max-height:38vh;overflow:auto}
+.q{padding:7px 8px;border-radius:7px;cursor:pointer;border:1px solid transparent}
+.q:hover{background:var(--deep)}
+.q.sel{background:var(--a900);border-color:var(--a700)}
+.q .id{color:var(--t600);font-size:10.5px;margin-right:4px}
+.q .done{color:var(--a300);font-size:11px;float:right}
+.small{font-size:11px;color:var(--t500)}
+#preview{white-space:pre-wrap;max-height:120px;overflow:auto;background:var(--deep);border-radius:6px;padding:8px;font-size:11.5px;color:var(--t400);margin-top:6px}
+.tag{display:inline-block;background:var(--a900);color:var(--a300);border-radius:5px;padding:1px 6px;font-size:10.5px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.chip{border:1px solid #3f424d;background:var(--deep);color:var(--t500);border-radius:999px;
+  padding:3px 9px;font-size:11.5px;cursor:pointer;user-select:none}
+.chip.on{background:var(--a900);border-color:var(--a700);color:var(--a300)}
+.chip .n{color:var(--t600);margin-left:3px;font-size:10.5px}
+.chip.on .n{color:var(--a300);opacity:.75}
+.chip.buyer::before{content:"◆";font-size:8px;margin-right:3px;vertical-align:1px;opacity:.7}
+</style>
+</head>
+<body>
+<h1>GeoLook 采样助手</h1>
+<div class="muted">人在提问，插件只负责抄写与回传。不代发、不后台采集。</div>
+
+<div class="card">
+  <div class="row"><span class="small" style="flex:none;color:var(--t500)">采样环境</span>
+    <select id="session" style="flex:1">
+      <option value="sandbox">一次性沙箱（最干净）</option>
+      <option value="incognito">无痕未登录</option>
+      <option value="clean_profile">专用采样 Profile（已登录）</option>
+      <option value="personal">个人日常账号（降级为待复核）</option>
+    </select></div>
+  <div id="sesnote" class="small" style="margin-top:4px;color:var(--t600)"></div>
+</div>
+
+<div id="discipline" class="warn" hidden></div>
+
+<div class="card">
+  <div class="row"><input id="server" placeholder="http://127.0.0.1:8765" value="http://127.0.0.1:8765">
+    <select id="slug" style="width:40%"></select></div>
+  <div class="row" style="margin-top:6px">
+    <button id="load" class="primary">载入队列</button>
+    <span id="qmeta" class="small"></span></div>
+  <div id="groups" class="chips"></div>
+  <div class="small" style="margin-top:4px;color:var(--t600)">选意图分组决定这轮采什么题。
+    <span class="tag" style="cursor:pointer" id="pickbuyer">只选买家意图</span>
+    <span class="tag" style="cursor:pointer" id="pickall">全选</span></div>
+</div>
+
+<div class="card">
+  <div class="row">
+    <span class="small" style="flex:1">当前引擎：<span id="plat" class="tag">未识别</span></span>
+    <select id="platSel" style="width:52%"></select>
+  </div>
+  <div id="qlist"></div>
+  <div class="row" style="margin-top:8px">
+    <button id="fill">填入问题（不发送）</button>
+    <button id="copy" class="ghost">复制</button>
+    <button id="extract" class="primary">提取答案</button>
+  </div>
+  <div id="preview" hidden></div>
+  <div class="row" style="margin-top:6px">
+    <span id="exmeta" class="small" style="flex:1"></span>
+    <button id="save" disabled>保存本题</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="row">
+    <span style="flex:1;font-size:13px">自动跑队列</span>
+    <button id="auto" class="primary">开始</button>
+    <button id="abort" class="ghost" hidden>中止</button>
+  </div>
+  <div class="small" style="margin-top:4px">逐题：新开会话 → 提交 → 等生成完 → 提取 → 保存。
+    <b>你必须留在页面上看着</b>；出现验证码/风控会立刻停。</div>
+  <div class="row" style="margin-top:6px">
+    <label class="small" style="flex:1">间隔 <input id="ivl" type="number" min="10" max="180" value="25" style="width:56px;display:inline-block"> 秒</label>
+    <label class="small" style="flex:1">上限 <input id="cap" type="number" min="1" max="30" value="20" style="width:56px;display:inline-block"> 题</label>
+  </div>
+  <div id="autolog" class="small" style="margin-top:6px;max-height:110px;overflow:auto"></div>
+</div>
+
+<div class="card">
+  <div class="row">
+    <span style="flex:1;font-size:13px">已采集 <b id="count">0</b> 条</span>
+    <button id="export" class="ghost">导出 .md</button>
+    <button id="upload" class="primary">上传到 GeoLook</button>
+  </div>
+  <div id="upmsg" class="small" style="margin-top:4px"></div>
+</div>
+
+<script src="sidepanel.js"></script>
+</body>
+</html>

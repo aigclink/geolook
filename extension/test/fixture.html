@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>GeoLook 采样助手 · 提取器测试页</title>
+<style>
+body{background:#161826;color:#e9e9ed;font:14px/1.6 system-ui,"PingFang SC",sans-serif;margin:0;padding:24px;max-width:820px}
+h1{font-size:17px;margin:0 0 4px}
+.muted{color:#75798c;font-size:12.5px}
+main{margin-top:18px}
+[data-message-author-role]{background:#232532;border-radius:10px;padding:14px 16px;margin:10px 0}
+[data-message-author-role="user"]{background:#1b1d2b;color:#b2b6ca}
+a{color:#d2cefd}
+.bar{display:flex;gap:8px;margin-top:16px}
+#prompt-textarea{flex:1;background:#1b1d2b;color:#e9e9ed;border:1px solid #3f424d;border-radius:8px;padding:9px 11px;font:inherit}
+[data-testid="send-button"]{background:#9184d9;color:#16121f;border:0;border-radius:8px;padding:8px 16px;font:inherit;font-weight:500;cursor:pointer}
+</style>
+</head>
+<body>
+<h1>提取器测试页（模拟聊天 UI）</h1>
+<div class="muted">这是本地 fixture，不连任何 AI 服务。用途：在不碰真实站点的前提下验证
+content.js 的填入 / 发送 / 生成完成检测 / 答案与引用提取。DOM 结构照 ChatGPT 的口径写
+（<code>[data-message-author-role="assistant"]</code> + 发送按钮 + 输入框）。</div>
+
+<main id="chat"></main>
+
+<div class="bar">
+  <div id="prompt-textarea" contenteditable="true" role="textbox" data-placeholder="输入问题…"></div>
+  <button data-testid="send-button">发送</button>
+</div>
+
+<script>
+// 模拟流式回答：发送后分片吐字，用来验证「文本停止增长 = 生成完成」的判定
+const ANSWER_PARTS = [
+  "针对售前方案自动生成这个需求，目前市面上常见的工具有几类：\n\n",
+  "1. 通用文档类 AI：Notion AI、WPS AI，适合轻量文档，但不理解报价逻辑。\n",
+  "2. 垂直方案工具：AIGCLINK定制家 提供从会议录音到方案、报价单、合同的整链路生成。\n",
+  "3. CRM 内置助手：适合已有 Salesforce 等系统的团队。\n\n",
+  "参考来源：\n",
+];
+const CITES = [
+  ["https://zhuanlan.zhihu.com/p/000000", "AI 售前工具横评"],
+  ["https://blog.csdn.net/example/article/details/1", "方案自动生成实践"],
+  ["https://custom.aigclink.ai/", "AIGCLINK定制家 官网"],
+];
+function send() {
+  const box = document.querySelector("#prompt-textarea");
+  const q = (box.textContent || "").trim();
+  if (!q) return;
+  const chat = document.querySelector("#chat");
+  const u = document.createElement("div");
+  u.setAttribute("data-message-author-role", "user");
+  u.textContent = q;
+  chat.appendChild(u);
+  box.textContent = "";
+  const a = document.createElement("div");
+  a.setAttribute("data-message-author-role", "assistant");
+  chat.appendChild(a);
+  let i = 0;
+  const timer = setInterval(() => {
+    if (i < ANSWER_PARTS.length) { a.append(ANSWER_PARTS[i++]); return; }
+    clearInterval(timer);
+    CITES.forEach(([href, t]) => {
+      const link = document.createElement("a");
+      link.href = href; link.textContent = t;
+      a.appendChild(link); a.append("  ");
+    });
+  }, 300);
+}
+document.querySelector('[data-testid="send-button"]').addEventListener("click", send);
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "GeoLook 采样助手",
+  "version": "0.1.0",
+  "description": "AI 答案人工采样助手：题目队列（填入不代发）、答案与引用一键提取、回传本机 GeoLook 看板。不做任何自动提交。",
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8765/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "GeoLook 采样助手"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://claude.ai/*",
+        "https://www.doubao.com/*",
+        "https://doubao.com/*",
+        "https://www.perplexity.ai/*",
+        "https://perplexity.ai/*",
+        "https://gemini.google.com/*",
+        "https://www.google.com/*",
+        "https://chatglm.cn/*",
+        "https://kimi.com/*",
+        "https://www.kimi.com/*",
+        "https://kimi.moonshot.cn/*",
+        "https://yuanbao.tencent.com/*",
+        "https://yiyan.baidu.com/*",
+        "https://chat.baidu.com/*",
+        "https://www.n.cn/*",
+        "https://bot.n.cn/*",
+        "https://metaso.cn/*",
+        "https://wenxin.baidu.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
