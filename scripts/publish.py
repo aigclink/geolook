@@ -21,27 +21,46 @@ import requests
 
 import geolib as G
 
-# 渠道注册表：env 是 .env 里的凭证变量；cfg 是存在项目 geo.json publishing.<code> 的非敏感配置
+# 渠道注册表：env 是 .env 里的凭证变量；cfg 是存在项目 geo.json publishing.<code> 的非敏感配置。
+# market：general 通用 / cn 国内 / global 海外，发布渠道页按此分组。
+#
+# 准入纪律：只接有官方可用发布 API 的平台，宁缺毋滥。微博（开放平台发布接口需企业应用
+# 审核）、搜狐号/头条号/小红书/B站专栏（无公开发布 API）、LinkedIn（三方 OAuth + token
+# 60 天过期）、Facebook 个人主页（接口已废弃）、Instagram（需企业号且不支持纯文本）均不
+# 接入——Cookie 模拟发布违反各家 ToS 且极易失效，不进本产品；这些平台走人工发布或用
+# 自定义 Webhook 桥接你自己的工具。
 PUBLISHERS = {
     "github": {
-        "name": "GitHub 仓库", "env": ["GITHUB_TOKEN"],
+        "name": "GitHub 仓库", "market": "general", "env": ["GITHUB_TOKEN"],
         "cfg": [("repo", "owner/repo"), ("branch", "main"), ("dir", "docs/geo")],
         "note": "Contents API 提交 markdown 到你的仓库（配 Pages/静态站即上线）",
     },
     "wordpress": {
-        "name": "WordPress", "env": ["WP_USER", "WP_APP_PASSWORD"],
+        "name": "WordPress", "market": "general", "env": ["WP_USER", "WP_APP_PASSWORD"],
         "cfg": [("site_url", "https://blog.example.com")],
         "note": "REST API 新建草稿文章，登录后台确认后再发布",
     },
+    "webhook": {
+        "name": "自定义 Webhook", "market": "general", "env": ["PUBLISH_WEBHOOK_URL"],
+        "cfg": [],
+        "note": "POST JSON {title, markdown, html, slug, path} 到你自己的接收端——没有官方 API 的平台用它桥接",
+    },
     "wechat_draft": {
-        "name": "公众号草稿箱", "env": ["WECHAT_APPID", "WECHAT_APPSECRET"],
+        "name": "公众号草稿箱", "market": "cn", "env": ["WECHAT_APPID", "WECHAT_APPSECRET"],
         "cfg": [("thumb_media_id", "永久素材封面 media_id（草稿必需）")],
         "note": "新建草稿，需在公众号后台预览并群发；服务器 IP 要在白名单",
     },
-    "webhook": {
-        "name": "自定义 Webhook", "env": ["PUBLISH_WEBHOOK_URL"],
-        "cfg": [],
-        "note": "POST JSON {title, markdown, html, slug, path} 到你自己的接收端",
+    "x": {
+        "name": "X（推文引流）", "market": "global",
+        "env": ["X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_SECRET"],
+        "cfg": [("link_url", "文章公开链接（留空则自动用该文件最近一次 GitHub/WordPress 发布的 URL）")],
+        "note": "API v2 发一条「标题 + 摘要 + 链接」的推文引流，不是发全文；developer.x.com 建应用取四个凭证",
+    },
+    "reddit": {
+        "name": "Reddit（全文自帖）", "market": "global",
+        "env": ["REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET", "REDDIT_USERNAME", "REDDIT_PASSWORD"],
+        "cfg": [("subreddit", "发到哪个 subreddit（不带 r/）")],
+        "note": "script 应用密码授权，markdown 全文作为 self-post；注意目标社区的自我推广规则",
     },
 }
 
@@ -168,8 +187,98 @@ def _pub_webhook(cfg, text, title, fname):
     return {"ok": False, "error": f"HTTP {r.status_code}: {r.text[:200]}"}
 
 
+# ---------------------------------------------------------------- X (OAuth 1.0a)
+
+def _oauth1_header(method: str, url: str, ck: str, cs: str, tk: str, ts: str) -> str:
+    """OAuth 1.0a 签名头（HMAC-SHA1，纯标准库）。v2 发推的请求体是 JSON，
+    不参与签名，只签 oauth_* 参数本身。"""
+    import hashlib
+    import hmac
+    import secrets
+    import time as _t
+    from urllib.parse import quote
+
+    q = lambda s: quote(str(s), safe="~")
+    p = {
+        "oauth_consumer_key": ck, "oauth_token": tk,
+        "oauth_signature_method": "HMAC-SHA1", "oauth_version": "1.0",
+        "oauth_timestamp": str(int(_t.time())), "oauth_nonce": secrets.token_hex(16),
+    }
+    base = "&".join([method.upper(), q(url),
+                     q("&".join(f"{q(k)}={q(v)}" for k, v in sorted(p.items())))])
+    key = f"{q(cs)}&{q(ts)}"
+    sig = base64.b64encode(hmac.new(key.encode(), base.encode(), hashlib.sha1).digest()).decode()
+    p["oauth_signature"] = sig
+    return "OAuth " + ", ".join(f'{q(k)}="{q(v)}"' for k, v in sorted(p.items()))
+
+
+def _latest_public_url(fname: str) -> str:
+    """该文件最近一次长文渠道（GitHub/WordPress/Webhook）发布成功的 URL——
+    社交渠道引流的默认回链：先发长文，再发社交。"""
+    for r in reversed(_pub_records_cache or []):
+        if r.get("ok") and r.get("url") and r.get("path", "").endswith(fname) \
+                and r.get("platform") in ("github", "wordpress", "webhook"):
+            return r["url"]
+    return ""
+
+
+_pub_records_cache: list = []   # publish() 调用前灌入，供 _pub_x 找回链
+
+
+def _pub_x(cfg, text, title, fname):
+    link = (cfg.get("link_url") or "").strip() or _latest_public_url(fname)
+    # 摘要：正文第一段非标题文本
+    para = next((ln.strip() for ln in text.splitlines()
+                 if ln.strip() and not ln.startswith("#")), "")
+    # 链接在 X 内固定折算 23 字符；中文按 2 权重计，保守用字符数上限 130 截断
+    room = 130 - (len(title) // 1)
+    tweet = title + ("\n\n" + para[:max(0, room)] if para and room > 20 else "")
+    if link:
+        tweet += "\n" + link
+    hdr = _oauth1_header("POST", "https://api.x.com/2/tweets",
+                         os.environ["X_API_KEY"], os.environ["X_API_SECRET"],
+                         os.environ["X_ACCESS_TOKEN"], os.environ["X_ACCESS_SECRET"])
+    r = requests.post("https://api.x.com/2/tweets", json={"text": tweet},
+                      headers={"Authorization": hdr, "Content-Type": "application/json"},
+                      timeout=30)
+    if r.status_code == 201:
+        tid = (r.json().get("data") or {}).get("id", "")
+        return {"ok": True, "url": f"https://x.com/i/web/status/{tid}" if tid else "",
+                "note": "" if link else "未带回链（该文件还没有长文渠道的公开 URL）"}
+    return {"ok": False, "error": f"HTTP {r.status_code}: {r.text[:200]}"}
+
+
+# ---------------------------------------------------------------- Reddit (script app)
+
+def _pub_reddit(cfg, text, title, fname):
+    sub = (cfg.get("subreddit") or "").strip().removeprefix("r/")
+    if not sub:
+        return {"ok": False, "error": "先在设置里配置 subreddit"}
+    ua = "geolook-publisher/0.1 by " + os.environ["REDDIT_USERNAME"]
+    tok = requests.post(
+        "https://www.reddit.com/api/v1/access_token",
+        auth=(os.environ["REDDIT_CLIENT_ID"], os.environ["REDDIT_CLIENT_SECRET"]),
+        data={"grant_type": "password", "username": os.environ["REDDIT_USERNAME"],
+              "password": os.environ["REDDIT_PASSWORD"]},
+        headers={"User-Agent": ua}, timeout=30)
+    if tok.status_code != 200 or "access_token" not in (tok.json() or {}):
+        return {"ok": False, "error": f"取 token 失败 HTTP {tok.status_code}: {tok.text[:150]}"}
+    r = requests.post(
+        "https://oauth.reddit.com/api/submit",
+        data={"sr": sub, "kind": "self", "title": title, "text": text,
+              "api_type": "json"},
+        headers={"Authorization": "bearer " + tok.json()["access_token"], "User-Agent": ua},
+        timeout=30)
+    j = (r.json() or {}).get("json", {}) if r.status_code == 200 else {}
+    if r.status_code == 200 and not j.get("errors"):
+        return {"ok": True, "url": (j.get("data") or {}).get("url", "")}
+    err = "; ".join("/".join(map(str, e)) for e in j.get("errors", [])) or f"HTTP {r.status_code}"
+    return {"ok": False, "error": err[:200]}
+
+
 _IMPL = {"github": _pub_github, "wordpress": _pub_wordpress,
-         "wechat_draft": _pub_wechat, "webhook": _pub_webhook}
+         "wechat_draft": _pub_wechat, "webhook": _pub_webhook,
+         "x": _pub_x, "reddit": _pub_reddit}
 
 
 # ---------------------------------------------------------------- 入口与记录
@@ -205,6 +314,8 @@ def publish(slug: str, code: str, rel: str, title: str = "") -> dict:
     except (ValueError, FileNotFoundError):
         return {"ok": False, "error": f"文件不可用：{rel}"}
     title = title or _title_of(text, fname)
+    global _pub_records_cache
+    _pub_records_cache = records(slug)   # 供社交渠道找该文件的长文回链
     res = _IMPL[code](_cfg(slug, code), text, title, fname)
     entry = {"at": G.now_iso(), "platform": code, "platform_name": PUBLISHERS[code]["name"],
              "path": rel, "title": title, "ok": res.get("ok", False),

@@ -1989,14 +1989,24 @@ async function vPublishing(){
         <div style="font-size:26px;font-weight:500;color:${pend.length?'var(--a300)':'var(--text)'}">${pend.length}<span style="font-size:12px;color:var(--a300)"> 清单 →</span></div></div>
     </div>
 
-    <h4 style="font-size:16px;margin:20px 0 8px">渠道</h4>
-    <div class="card elev" style="padding:6px 18px">
-      ${pubs.map((x,i)=>`<div class="row" style="padding:11px 0;box-shadow:inset 0 -1px 0 var(--line)">
-        <span class="dot" style="background:${x.missing.length?'#595d6c':'var(--a400)'}"></span>
-        <span style="flex:1;font-size:13.5px">${esc(x.name)}
-          <div class="muted" style="font-size:11.5px;margin-top:1px">${esc(x.note)}</div></span>
-        <span style="font-size:11.5px;color:${x.missing.length?'var(--t600)':'var(--a300)'}">${x.missing.length?('缺 '+x.missing.map(esc).join('、')):'已就绪'}</span>
-        <button class="btn ${x.missing.length?'btn-secondary':'btn-ghost'}" style="font-size:12px;padding:3px 10px" onclick="editPub(${i})">配置</button></div>`).join('')}
+    ${[['general','通用 · 长文阵地','文章全文的落点，也是社交渠道引流的回链来源——先发这里'],
+       ['cn','国内','按官方 API 可用性接入'],
+       ['global','海外','社交渠道发「标题+摘要+回链」引流，长文先发通用渠道']].map(([mk,label,hint])=>{
+      const list=pubs.map((x,i)=>({x,i})).filter(({x})=>(x.market||'general')===mk);
+      if(!list.length)return '';
+      return `<h4 style="font-size:16px;margin:20px 0 6px">${label}<span style="font-size:11.5px;color:var(--t600);font-weight:400"> · ${hint}</span></h4>
+      <div class="card elev" style="padding:6px 18px">
+        ${list.map(({x,i})=>`<div class="row" style="padding:11px 0;box-shadow:inset 0 -1px 0 var(--line)">
+          <span class="dot" style="background:${x.missing.length?'#595d6c':'var(--a400)'}"></span>
+          <span style="flex:1;font-size:13.5px">${esc(x.name)}
+            <div class="muted" style="font-size:11.5px;margin-top:1px">${esc(x.note)}</div></span>
+          <span style="font-size:11.5px;color:${x.missing.length?'var(--t600)':'var(--a300)'}">${x.missing.length?('缺 '+x.missing.map(esc).join('、')):'已就绪'}</span>
+          <button class="btn ${x.missing.length?'btn-secondary':'btn-ghost'}" style="font-size:12px;padding:3px 10px" onclick="editPub(${i})">配置</button></div>`).join('')}
+      </div>`}).join('')}
+    <div class="muted" style="font-size:11.5px;margin-top:10px;line-height:1.7">
+      为什么没有微博 / 头条号 / 小红书 / B站 / 搜狐号 / LinkedIn / Facebook / Instagram：
+      这些平台没有个人可用的官方发布 API（或需企业审核、token 频繁过期），Cookie 模拟发布违反平台条款且极易失效——
+      <b>宁可不接，不做假接入</b>。需要铺这些阵地：人工发布后到工作台「分发清单」勾掉，或用「自定义 Webhook」桥接你自己的工具。
     </div>
 
     <h4 style="font-size:16px;margin:24px 0 8px">发布记录${recs.length?`<span style="font-size:11.5px;color:var(--t600);font-weight:400"> · 共 ${recs.length} 条</span>`:''}</h4>

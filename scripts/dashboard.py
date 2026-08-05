@@ -350,6 +350,7 @@ class Handler(BaseHTTPRequestHandler):
                 for code, spec in P.PUBLISHERS.items():
                     cfg = P._cfg(slug, code)
                     pubs.append({"code": code, "name": spec["name"], "note": spec["note"],
+                                 "market": spec.get("market", "general"),
                                  "env": spec["env"], "missing": P.missing_env(code),
                                  "cfg": [{"key": k, "hint": h, "value": cfg.get(k, "")}
                                          for k, h in spec["cfg"]]})
