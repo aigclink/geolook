@@ -874,6 +874,18 @@ UI_RX.ja.push(
  [/^有 · (\d+) 条 URL · robots 未声明$/,'あり · $1 URL · robots 未宣言'],
  [/^有 · (\d+) 条 URL$/,'あり · $1 URL'],
 );
+Object.assign(UI_D.en,{'可引段落':'Quotable §',
+'可被独立引用的段落数 / H2 小节数——检索按段落选材，页面长不等于有可引之材':'Independently quotable passages / H2 sections — retrieval picks passages, a long page ≠ quotable material'});
+Object.assign(UI_D.ja,{'可引段落':'引用可能段落',
+'可被独立引用的段落数 / H2 小节数——检索按段落选材，页面长不等于有可引之材':'独立引用可能な段落数 / H2 節数——検索は段落単位で選ぶ。長いページ＝引用素材ではない'});
+UI_RX.en.push(
+ [/^· (\d+) 页整页没有可独立引用的段落$/,'· $1 pages have no independently quotable passage'],
+ [/^· (\d+) 组标题重复的页面$/,'· $1 groups of duplicate-title pages'],
+ [/^· (\d+) 组近重复正文的页面$/,'· $1 groups of near-duplicate pages']);
+UI_RX.ja.push(
+ [/^· (\d+) 页整页没有可独立引用的段落$/,'· $1 ページに独立引用可能な段落なし'],
+ [/^· (\d+) 组标题重复的页面$/,'· タイトル重複 $1 組'],
+ [/^· (\d+) 组近重复正文的页面$/,'· 本文近似重複 $1 組']);
 UI_SUB.en.push(['优先 · 联网','Priority·search'],['可选 · 不联网','Optional·no search'],['低风险','low-risk'],['需观察','observe'],['高风险','high-risk'],['已发布','Published'],['待发布','Pending']);
 UI_SUB.ja.push(['优先 · 联网','優先·検索'],['可选 · 不联网','任意·検索なし'],['低风险','低リスク'],['需观察','要観察'],['高风险','高リスク'],['已发布','公開済'],['待发布','未公開']);
 // 渠道名 / 说明 / 配置教程（后端 publish.py 下发的数据，同样走 DOM 翻译）
@@ -2706,10 +2718,11 @@ function vSiteAudit(){
       ${(ag||ab)?`<span class="tag tag-accent">${ag?('等级 '+ag):''}${ag&&ab?' + ':''}${ab?('缺「'+ab+'」'):''} · ${plist.length} 页</span>
         <button class="btn btn-ghost" style="font-size:11.5px" onclick="ST.agrade=null;ST.ablk=null;render()">清除筛选</button>`:''}
     </div>
-    <div class="tbl"><table class="table"><thead><tr><th style="width:70px">分数</th><th style="width:70px">词数</th><th style="width:280px">缺失抽取块</th><th>页面</th></tr></thead><tbody>
+    <div class="tbl"><table class="table"><thead><tr><th style="width:70px">分数</th><th style="width:70px">词数</th><th style="width:86px" title="可被独立引用的段落数 / H2 小节数——检索按段落选材，页面长不等于有可引之材">可引段落</th><th style="width:250px">缺失抽取块</th><th>页面</th></tr></thead><tbody>
       ${plist.slice(0,(ag||ab)?40:12).map(pg=>`<tr>
         <td style="font-size:13px;color:${pg.score<45?'var(--a300)':'var(--t400)'}">${pg.score}</td>
         <td style="font-size:13px;color:var(--t400)">${pg.word_count}</td>
+        <td style="font-size:13px;color:${pg.sections_total>=3&&pg.sections_quotable===0?'var(--accent)':'var(--t400)'}">${pg.sections_total!=null?(pg.sections_quotable+'/'+pg.sections_total):'—'}</td>
         <td style="font-size:12.5px;color:var(--t500)">${esc(Object.keys(pg.blocks||{}).filter(k=>!pg.blocks[k]).join('、')||'—')}</td>
         <td style="font-size:12.5px"><a href="${esc(pg.url)}" target="_blank" rel="noopener">${esc((pg.title||pg.url).slice(0,60))}</a></td></tr>`).join('')}
     </tbody></table></div>

@@ -223,6 +223,20 @@ def from_audit(audit: dict, cfg: dict, seq) -> list[dict]:
             t["baseline_count"] = len(miss)
             out.append(t)
 
+    # 段落级可引：检索按段落选材，整页没有一段能独立引用 = 页面再长也选不中
+    noquote = [p["url"] for p in pages if _has_issue(p, "NO_QUOTABLE_PASSAGE", "可独立引用的段落")]
+    if len(noquote) >= 2:
+        t = _t(next(seq), "P1", "内容矩阵", "核心页改出可独立引用的证据段",
+               f"{len(noquote)} 页正文不短但没有一段自包含可引——每段要么太短、要么没有数字/定义/"
+               "步骤等硬信息。检索的最小单元是段落，不是页面（method.md 段落级可引）",
+               "每页挑 2–3 个核心 H2 小节改成证据段：60 词以上、含具体数字或定义句或操作步骤，"
+               "段落开头直接回答小节标题的问题",
+               "内容", "M", {"type": "auto", "check": "pages.quotable",
+                             "desc": "受影响页面「无可引段落」数下降 ≥ 50%"},
+               affected=noquote[:30])
+        t["baseline_count"] = len(noquote)
+        out.append(t)
+
     short = [p["url"] for p in pages if p["word_count"] < 1000 and p["word_count"] >= 100]
     if len(short) >= 3:
         t = _t(next(seq), "P1", "内容矩阵", "核心页正文扩到 1000+ 词",

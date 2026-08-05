@@ -78,6 +78,29 @@ def jsonld_has_key(obj, keys: set[str]) -> bool:
     return False
 
 
+def split_sections(text: str, h2s: list[str]) -> list[str]:
+    """按 H2 标题行把扁平正文切成段落组。检索的最小单元是段落而不是页面——
+    一段能独立回答问题的文字可以赢过竞品的整页（GEO Readiness Manual 第 0 章）。"""
+    heads = {h.strip() for h in h2s if h and h.strip()}
+    if not heads:
+        return []
+    lines = text.splitlines()
+    idx = [i for i, ln in enumerate(lines) if ln.strip() in heads]
+    if not idx:
+        return []
+    bounds = idx + [len(lines)]
+    return ["\n".join(lines[a + 1:b]).strip() for a, b in zip(bounds, bounds[1:])]
+
+
+def quotable(seg: str) -> bool:
+    """一段是否「可被独立引用」：有足够词量承载语义，且含至少一种硬信息
+    （数字/定义/步骤）。纯观点段、导航段、口号段都不算。"""
+    import geolib as _G
+    if _G.word_count(seg) < 60:
+        return False
+    return bool(RE_NUMBER.search(seg) or RE_DEFINITION.search(seg) or RE_HOWTO.search(seg))
+
+
 def score_page(page: dict, keywords: list[str]) -> dict:
     text = page.get("text", "") or ""
     wc = page.get("word_count", 0)
@@ -167,6 +190,14 @@ def score_page(page: dict, keywords: list[str]) -> dict:
         if not ok:
             issue(block_codes[k], f"P1 缺「{k}」块，补上可显著提升被吸收概率")
 
+    # 4b. 段落级可引：检索按段落选材，页面长 ≠ 有可引之材
+    segs = split_sections(text, h2)
+    q_n = sum(1 for sg in segs if quotable(sg))
+    if len(segs) >= 3 and wc >= 300 and q_n == 0:
+        issue("NO_QUOTABLE_PASSAGE",
+              "P1 整页没有一个可独立引用的段落——每段要么太短、要么没有数字/定义/步骤等硬信息；"
+              "检索是按段落选材的，先把 2–3 个核心段落改成自包含的证据段")
+
     # 5. 权威信号 15
     s = 0.0
     if RE_DATE.search(text) or jsonld_has_key(page.get("jsonld_raw"), {"dateModified", "datePublished"}):
@@ -187,6 +218,11 @@ def score_page(page: dict, keywords: list[str]) -> dict:
     # 检索系统会拿可见文本对账，对不上时结构化数据反而变成负信号
     if "FAQPage" in types and not RE_FAQ.search(text):
         issue("SCHEMA_CONTENT_MISMATCH", "P1 JSON-LD 声明了 FAQPage 但页面正文没有可见的问答内容，schema 必须与可见内容一致")
+    # 作者实体关联：文章型页面的 schema 不挂 author，引擎无法把作者与出版方连起来，
+    # 内容会被视为无主之作（GEO Readiness Manual：cannot connect the author to the publication）
+    if types & {"Article", "TechArticle", "NewsArticle", "BlogPosting"} \
+            and not jsonld_has_key(page.get("jsonld_raw"), {"author"}):
+        issue("NO_AUTHOR_ENTITY", "P2 文章型 JSON-LD 没有 author 字段，作者与出版方连不起来，权威信号打折")
     d["权威信号"] = s
 
     # 6. 对题性 10（title / h1 / h2 是否覆盖目标问题里的词）
@@ -205,6 +241,7 @@ def score_page(page: dict, keywords: list[str]) -> dict:
         "score": total,
         "grade": "A" if total >= 80 else "B" if total >= 65 else "C" if total >= 45 else "D",
         "dimensions": {k: round(v, 1) for k, v in d.items()},
+        "sections_total": len(segs), "sections_quotable": q_n,
         "blocks": has,
         "jsonld_types": sorted(types),
         "issues": issues,
@@ -298,6 +335,33 @@ def run(slug: str) -> dict:
         site_issues.append("P2 robots.txt 没有声明 Sitemap: 行，AI 抓取器发现新页面会更慢")
     if not site.get("has_llms_txt"):
         site_issues.append("P2 没有 /llms.txt，可以低成本给 AI 一份官方事实索引")
+    # 重复检测：同题多 URL 会让检索在错误的候选里二选一，「错的那个」可能赢
+    #（GEO Readiness Manual：duplicate URL increases the chance the wrong thing survives）
+    import hashlib
+    by_title: dict[str, list[str]] = {}
+    by_body: dict[str, list[str]] = {}
+    for p in pages:
+        if (p.get("status") or 0) != 200 or p.get("word_count", 0) < 120:
+            continue
+        t = (p.get("title") or "").strip()
+        if t:
+            by_title.setdefault(t, []).append(p["url"])
+        body_key = hashlib.md5(
+            re.sub(r"\s+", "", (p.get("text") or "")[:600]).encode()).hexdigest()
+        by_body.setdefault(body_key, []).append(p["url"])
+    # 多语言站的不同语言版本标题几乎必不同，正文前段也不同，误报风险低
+    dup_titles = [(t, us) for t, us in by_title.items() if len(us) > 1]
+    dup_bodies = [us for us in by_body.values() if len(us) > 1]
+    if dup_titles:
+        ex = dup_titles[0]
+        site_issues.append(
+            f"P1 {len(dup_titles)} 组页面标题完全相同（如「{ex[0][:40]}」× {len(ex[1])} 个 URL），"
+            "同题多 URL 会让检索在错误候选里二选一——合并或用 canonical 指向唯一版本")
+    if dup_bodies:
+        site_issues.append(
+            f"P1 {len(dup_bodies)} 组页面正文开头完全一致（近重复内容），例：{dup_bodies[0][0]}"
+            f" 与 {dup_bodies[0][1]}——保留一个规范版本，其余 301 或 canonical")
+
     if multilingual and content_pages and hreflang_pages / content_pages < 0.3:
         site_issues.append(
             f"P1 多语言站但只有 {hreflang_pages}/{content_pages} 个内容页声明 hreflang，"
@@ -372,6 +436,8 @@ def run(slug: str) -> dict:
             if multilingual and content_pages and hreflang_pages / content_pages < 0.3 else None,
             ("warn", f"sitemap 含 {site['sitemap_noisy_urls']} 条低价值 URL（索引污染）")
             if site.get("sitemap_noisy_urls") else None,
+            ("warn", f"{len(dup_titles)} 组标题重复的页面") if dup_titles else None,
+            ("warn", f"{len(dup_bodies)} 组近重复正文的页面") if dup_bodies else None,
         ]),
         layer("understand", "理解", "机器读得懂这是什么实体吗", [
             (("fail" if nojld >= n * 0.5 else "warn"), f"{nojld} 页没有任何 JSON-LD") if nojld else None,
@@ -382,6 +448,8 @@ def run(slug: str) -> dict:
         ]),
         layer("quote", "可引用", "有值得引用的具体内容吗", [
             (("fail" if avg < 45 else "warn"), f"页面均分 {avg}（70 以下属「需要改造」）") if avg < 70 else None,
+            ("warn", f"{pages_with('NO_QUOTABLE_PASSAGE')} 页整页没有可独立引用的段落")
+            if pages_with("NO_QUOTABLE_PASSAGE") else None,
             *[("warn", f"「{g['block']}」块缺失 {g['missing_pages']}/{g['total']} 页")
               for g in block_gap_dicts if g["missing_pages"] >= g["total"] * 0.5][:3],
         ]),

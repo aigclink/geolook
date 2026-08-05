@@ -17,6 +17,7 @@ checker 语法（写在工单的 acceptance.check 里）：
   pages.static_text               受影响页面正文词数 ≥120（SPA 修复）
   pages.has_jsonld                受影响页面已挂 JSON-LD
   pages.block:定义                缺该抽取块的页面数下降 ≥50%
+  pages.quotable                  「整页无可引段落」的页面数下降 ≥50%
   pages.wordcount_gte:1000        正文不足 1000 词的页面数下降 ≥40%
   metrics.mention_rate_gte:cn:0.3 指定市场平均无提示提及率达标
   metrics.own_cite_gte:cn:0.1     指定市场引用官网率达标
@@ -109,6 +110,13 @@ def check(task: dict, audit: dict, metrics: dict) -> tuple[bool | None, str, dic
             return nbad == 0, (f"抽样 {lch.get('checked', 0)} 条链接全部有效" if nbad == 0
                               else f"仍有 {nbad} 条失效/被封链接"), \
                 {"label": "llms.txt 失效链接", "cur": nbad, "target": 0, "op": "lte"}
+        if expr == "pages.quotable":
+            base = task.get("baseline_count", len(aff))
+            cur = sum(1 for u in aff
+                      if "NO_QUOTABLE_PASSAGE" in (pages.get(u, {}).get("issue_codes") or []))
+            return cur <= base * 0.5, f"无可引段落的页面 {cur}（基线 {base}，目标 ≤{int(base*0.5)}）", \
+                {"label": "无可引段落的页面", "cur": cur, "target": int(base * 0.5),
+                 "op": "lte", "base": base}
         if expr == "pages.no_noindex":
             bad = [u for u in aff if any(
                 c in (pages.get(u, {}).get("issue_codes") or [])
