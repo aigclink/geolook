@@ -97,6 +97,7 @@ def analyze_page(url: str, res: dict) -> dict:
     lis = soup.find_all("li")
     tables = soup.find_all("table")
 
+    hreflangs = soup.find_all("link", rel=lambda v: v and "alternate" in v, hreflang=True)
     canonical = soup.find("link", rel=lambda v: v and "canonical" in v)
     desc = soup.find("meta", attrs={"name": "description"})
     robots_meta = soup.find("meta", attrs={"name": "robots"})
@@ -116,6 +117,8 @@ def analyze_page(url: str, res: dict) -> dict:
         "title": (soup.title.get_text(" ", strip=True) if soup.title else ""),
         "meta_description": (desc.get("content", "") if desc else ""),
         "meta_robots": (robots_meta.get("content", "") if robots_meta else ""),
+        "x_robots_tag": res.get("x_robots_tag", ""),
+        "hreflang_count": len(hreflangs),
         "canonical": (canonical.get("href", "") if canonical else ""),
         "lang": (soup.html.get("lang", "") if soup.html else ""),
         "h1": h1,
@@ -134,6 +137,90 @@ def analyze_page(url: str, res: dict) -> dict:
         "text": text[:20000],
         "fetched_at": G.now_iso(),
     }
+
+
+# 关注的 AI 抓取器（robots 判定用产品名做 UA 匹配）
+AI_BOTS = ["GPTBot", "OAI-SearchBot", "ClaudeBot", "Claude-SearchBot", "PerplexityBot",
+           "Bytespider", "Baiduspider", "Sogou web spider", "YisouSpider", "Google-Extended"]
+
+# UA 差异探测用的真实 UA 串（各家公开文档口径）：robots 放行 ≠ WAF/CDN 放行，
+# 普通浏览器 200 而 AI 爬虫 403 的站，在引擎侧等于不存在，且站长自己看不出来
+AI_UA_PROBES = {
+    "GPTBot": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; "
+              "GPTBot/1.2; +https://openai.com/gptbot",
+    "ClaudeBot": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; "
+                 "ClaudeBot/1.0; +claudebot@anthropic.com",
+    "PerplexityBot": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; "
+                     "PerplexityBot/1.0; +https://perplexity.ai/perplexitybot",
+    "Bytespider": "Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) "
+                  "Mobile Safari/537.36 (compatible; Bytespider; spider-feedback@bytedance.com)",
+}
+
+
+def check_robots(robots_txt: str, sample_paths: list[str]) -> tuple[list[str], list[dict]]:
+    """返回 (整站封禁的 AI 爬虫, 部分路径封禁 [{bot, rule, paths, count}])。"""
+    groups = G.robots_parse(robots_txt)
+    blocked, partial = [], []
+    for bot in AI_BOTS:
+        ok_root, rule = G.robots_decision(groups, bot, "/")
+        if not ok_root:
+            blocked.append(bot)
+            continue
+        bad = []
+        for p in sample_paths:
+            ok, r = G.robots_decision(groups, bot, p)
+            if not ok:
+                bad.append((p, r))
+        if bad:
+            partial.append({"bot": bot, "rule": bad[0][1], "paths": [p for p, _ in bad[:3]],
+                            "count": len(bad), "sampled": len(sample_paths)})
+    return blocked, partial
+
+
+def probe_ai_ua(root: str, home: dict, robots_txt: str, delay: float) -> tuple[dict, list[str]]:
+    """换 AI 爬虫 UA 抓一次首页，检出 WAF/CDN 的差异封锁。
+    只对 robots 放行的爬虫探测（robots 都封了的，被 WAF 拦是站长本意，不算问题）；
+    普通 UA 拿不到 200 时也不探测，那是站点本身的问题，不是差异封锁。"""
+    probe: dict[str, int] = {}
+    ua_blocked: list[str] = []
+    if (home.get("status") or 0) != 200:
+        return probe, ua_blocked
+    groups = G.robots_parse(robots_txt)
+    for bot, ua in AI_UA_PROBES.items():
+        if not G.robots_decision(groups, bot, "/")[0]:
+            continue
+        res = G.fetch(root, timeout=10, retries=0, ua=ua)
+        probe[bot] = res["status"]
+        if res["status"] in (401, 403, 406, 429, 451, 503):
+            ua_blocked.append(bot)
+        time.sleep(delay)
+    return probe, ua_blocked
+
+
+def check_llms_txt(root: str, llms_txt: str, robots_txt: str) -> dict | None:
+    """llms.txt 只有指向可抓取的有效页面才有意义：抽样验证里面的链接。"""
+    if not llms_txt:
+        return None
+    urls = []
+    for u in re.findall(r"https?://[^\s)\]>\"'`]+", llms_txt):
+        u = u.rstrip(".,;:")
+        if G.same_site(root, u) and G.is_fetchable(u) and u not in urls:
+            urls.append(u)
+    groups = G.robots_parse(robots_txt)
+    broken, robots_blocked = [], []
+    sample = urls[:6]
+    for u in sample:
+        path = urlparse(u).path or "/"
+        bots_denied = [b for b in ("GPTBot", "ClaudeBot", "PerplexityBot")
+                       if not G.robots_decision(groups, b, path)[0]]
+        if bots_denied:
+            robots_blocked.append({"url": u, "bots": bots_denied})
+        res = G.fetch(u, timeout=10, retries=0)
+        if res["status"] != 200:
+            broken.append({"url": u, "status": res["status"]})
+        time.sleep(0.3)
+    return {"total_links": len(urls), "checked": len(sample),
+            "broken": broken, "robots_blocked": robots_blocked}
 
 
 def check_crawl_health(pages: list[dict]):
@@ -196,14 +283,17 @@ def run(slug: str, max_pages: int | None = None, delay: float = 0.5) -> dict:
             pages_by_idx.update(out)
     pages = [pages_by_idx[i] for i in range(1, len(candidates) + 1)]
 
-    # AI 抓取器是否被 robots 拦截（GEO 的第一道门槛）
-    ai_bots = ["GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot", "Bytespider",
-               "Baiduspider", "Sogou web spider", "YisouSpider", "Google-Extended"]
-    blocked = []
-    for bot in ai_bots:
-        m = re.search(rf"(?is)user-agent:\s*{re.escape(bot)}\s*(.*?)(?=\nuser-agent:|\Z)", robots_txt or "")
-        if m and re.search(r"(?im)^\s*disallow:\s*/\s*$", m.group(1)):
-            blocked.append(bot)
+    # AI 抓取器是否被 robots 拦截（GEO 的第一道门槛）。
+    # 按 RFC 9309 语义判：通配符组封禁、多 UA 共享组、specificity 覆盖都能检出。
+    blocked, partial = check_robots(robots_txt, [urlparse(u).path or "/" for u in candidates[:12]])
+    # WAF/CDN 差异封锁：robots 说放行不代表真放行，换 AI 爬虫的 UA 实测一次
+    ua_probe, ua_blocked = probe_ai_ua(root, home, robots_txt, delay)
+    llms_check = check_llms_txt(root, llms_txt, robots_txt)
+
+    # 索引污染：sitemap 里的带参/搜索/翻页 URL 会把低质片段灌进检索索引，
+    # 稀释实体表征——sitemap 该只装值得被引用的规范页
+    noisy = [u for u in sitemap_urls
+             if "?" in u or re.search(r"/(search|tag|page/\d+|sessions?)($|/|\?)", u, re.I)]
 
     site = {
         "slug": slug,
@@ -213,7 +303,14 @@ def run(slug: str, max_pages: int | None = None, delay: float = 0.5) -> dict:
         "has_llms_txt": bool(llms_txt),
         "has_sitemap": bool(sitemap_urls),
         "sitemap_url_count": len(sitemap_urls),
+        "robots_sitemap_declared": bool(re.search(r"(?im)^\s*sitemap:", robots_txt or "")),
+        "sitemap_noisy_urls": len(noisy),
+        "sitemap_noisy_example": (noisy[0] if noisy else None),
         "ai_bots_blocked": blocked,
+        "ai_bots_partial": partial,
+        "ai_ua_probe": ua_probe,
+        "ai_ua_blocked": ua_blocked,
+        "llms_txt_check": llms_check,
         "pages_crawled": len(pages),
         "pages_ok": sum(1 for p in pages if p["status"] == 200),
     }

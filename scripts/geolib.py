@@ -175,11 +175,12 @@ def is_fetchable(url: str) -> bool:
 
 
 
-def fetch(url: str, timeout: int = 12, retries: int = 1) -> dict:
-    """返回 {url, final_url, status, html, elapsed, error}。只读网页，且有体积上限。"""
+def fetch(url: str, timeout: int = 12, retries: int = 1, ua: str | None = None) -> dict:
+    """返回 {url, final_url, status, html, x_robots_tag, elapsed, error}。只读网页，且有体积上限。
+    ua 可换成 AI 爬虫的 User-Agent 做差异探测（WAF/CDN 是否单独拦 AI 爬虫）。"""
     if not is_fetchable(url):
         return {"url": url, "final_url": url, "status": 0, "html": "", "content_type": "",
-                "elapsed": 0, "error": "跳过：不是网页（下载/媒体/静态资源）"}
+                "x_robots_tag": "", "elapsed": 0, "error": "跳过：不是网页（下载/媒体/静态资源）"}
     last = ""
     for attempt in range(retries + 1):
         try:
@@ -187,7 +188,7 @@ def fetch(url: str, timeout: int = 12, retries: int = 1) -> dict:
             r = requests.get(
                 url,
                 timeout=timeout,
-                headers={"User-Agent": UA, "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8"},
+                headers={"User-Agent": ua or UA, "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8"},
                 allow_redirects=True,
                 stream=True,
             )
@@ -197,10 +198,12 @@ def fetch(url: str, timeout: int = 12, retries: int = 1) -> dict:
                 time.sleep(1.5)
                 continue
             ctype = r.headers.get("Content-Type", "")
+            xrobots = r.headers.get("X-Robots-Tag", "")
             if ctype and not any(k in ctype.lower() for k in ("html", "text/plain", "xml")):
                 r.close()
                 return {"url": url, "final_url": r.url, "status": r.status_code, "html": "",
-                        "content_type": ctype, "elapsed": round(time.time() - t0, 2),
+                        "content_type": ctype, "x_robots_tag": xrobots,
+                        "elapsed": round(time.time() - t0, 2),
                         "error": f"跳过非网页内容（{ctype.split(';')[0]}）"}
             chunks, size = [], 0
             for chunk in r.iter_content(65536):
@@ -220,6 +223,7 @@ def fetch(url: str, timeout: int = 12, retries: int = 1) -> dict:
                 "status": r.status_code,
                 "html": raw.decode(enc, "replace"),
                 "content_type": ctype,
+                "x_robots_tag": xrobots,
                 "elapsed": round(time.time() - t0, 2),
                 "error": None,
             }
@@ -227,7 +231,8 @@ def fetch(url: str, timeout: int = 12, retries: int = 1) -> dict:
             last = f"{type(e).__name__}: {e}"
             if attempt < retries:
                 time.sleep(1.5)
-    return {"url": url, "final_url": url, "status": 0, "html": "", "content_type": "", "elapsed": 0, "error": last}
+    return {"url": url, "final_url": url, "status": 0, "html": "", "content_type": "",
+            "x_robots_tag": "", "elapsed": 0, "error": last}
 
 
 def fetch_text(url: str, timeout: int = 8) -> str:
@@ -239,6 +244,74 @@ def fetch_text(url: str, timeout: int = 8) -> str:
     except Exception:  # noqa: BLE001
         pass
     return ""
+
+
+# ---------------------------------------------------------------- robots.txt
+# 按 RFC 9309 语义解析，而不是逐行正则：三个最容易误判的点——
+#   1. 多个 User-agent 行共享同一组规则（组内第一个 UA 后面的会被逐行正则漏掉）
+#   2. 具体 UA 组存在时通配符组整组失效（specificity，不看先后顺序）
+#   3. 规则按最长路径匹配定胜负，同长时 Allow 胜出；支持 * 与 $ 通配符
+# 所以「User-agent: * / Disallow: /」会封掉所有没有专属组的 AI 爬虫，
+# 而「User-agent: GPTBot / Allow: /」会让 GPTBot 无视通配符组里的任何 Disallow。
+
+
+def robots_parse(txt: str) -> list[dict]:
+    """解析成 [{agents: [ua...], rules: [(allow, path)]}]。空 Disallow 值 = 全放行，不算规则。"""
+    groups: list[dict] = []
+    cur = None
+    last_was_agent = False
+    for raw in (txt or "").splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if not line or ":" not in line:
+            continue
+        field, _, value = line.partition(":")
+        field, value = field.strip().lower(), value.strip()
+        if field == "user-agent":
+            if cur is None or not last_was_agent:
+                cur = {"agents": [], "rules": []}
+                groups.append(cur)
+            cur["agents"].append(value.lower())
+            last_was_agent = True
+        elif field in ("allow", "disallow"):
+            last_was_agent = False
+            if cur is not None and value:
+                cur["rules"].append((field == "allow", value))
+        else:
+            last_was_agent = False
+    return groups
+
+
+def _robots_rule_rx(pattern: str) -> re.Pattern:
+    rx = re.escape(pattern).replace(r"\*", ".*")
+    if rx.endswith(r"\$"):
+        rx = rx[:-2] + "$"
+    return re.compile("^" + rx)
+
+
+def robots_decision(groups: list[dict], ua: str, path: str) -> tuple[bool, str | None]:
+    """某个爬虫（产品名，如 'GPTBot'）能否抓某路径。返回 (允许?, 命中的规则文本)。"""
+    ua_l = (ua or "").lower()
+    specific, spec_len, wildcard = None, -1, None
+    for g in groups:
+        for a in g["agents"]:
+            if a == "*":
+                if wildcard is None:
+                    wildcard = g
+            elif a and (a in ua_l or ua_l in a) and len(a) > spec_len:
+                specific, spec_len = g, len(a)
+    g = specific or wildcard
+    if not g:
+        return True, None
+    path = path or "/"
+    match_len, allowed, rule = -1, True, None
+    for allow, pat in g["rules"]:
+        if _robots_rule_rx(pat).match(path):
+            plen = len(pat)
+            # 最长匹配优先；同长时 Allow 胜出
+            if plen > match_len or (plen == match_len and allow and not allowed):
+                match_len, allowed = plen, allow
+                rule = ("Allow: " if allow else "Disallow: ") + pat
+    return allowed, rule
 
 
 def same_site(a: str, b: str) -> bool:
