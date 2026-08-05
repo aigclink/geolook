@@ -55,7 +55,7 @@ class TestRebuild(unittest.TestCase):
             _project(d)
             out = Path(d) / "x" / "delivery" / G.today()
             out.mkdir(parents=True)
-            (out / "04-验收表.html").write_text("旧", "utf-8")  # 上次条件生成的残留
+            (out / "04-驗收表.html").write_text("舊", "utf-8")  # 上次條件生成的殘留
             (out / "假文件.txt").write_text("旧", "utf-8")
             with mock.patch.object(G, "WORK", Path(d)):
                 DL.run("x")
@@ -68,29 +68,29 @@ class TestUnverified(unittest.TestCase):
             _project(d)
             with mock.patch.object(G, "WORK", Path(d)):
                 out = DL.run("x")
-            vmd = (out / "04-验收表.md").read_text("utf-8")
-            self.assertIn("本期未验收", vmd)
-            self.assertIn("尚无验收记录", vmd)
-            self.assertIn("本期未验收", (out / "README.md").read_text("utf-8"))
+            vmd = (out / "04-驗收表.md").read_text("utf-8")
+            self.assertIn("本期未驗收", vmd)
+            self.assertIn("尚無驗收記錄", vmd)
+            self.assertIn("本期未驗收", (out / "README.md").read_text("utf-8"))
 
     def test_verify_older_than_audit_marked_unverified(self):
         with tempfile.TemporaryDirectory() as d:
             _project(d, audit_date="2026-07-28", verify_date="2026-07-27")
             with mock.patch.object(G, "WORK", Path(d)):
                 out = DL.run("x")
-            vmd = (out / "04-验收表.md").read_text("utf-8")
-            self.assertIn("本期未验收", vmd)
+            vmd = (out / "04-驗收表.md").read_text("utf-8")
+            self.assertIn("本期未驗收", vmd)
             self.assertIn("2026-07-27", vmd)
-            self.assertNotIn("| 编号 | 任务 |", vmd)  # 不静默复用旧验收结果
+            self.assertNotIn("| 編號 | 任務 |", vmd)  # 不靜默複用舊驗收結果
 
     def test_verify_same_day_used(self):
         with tempfile.TemporaryDirectory() as d:
             _project(d, verify_date=G.today())
             with mock.patch.object(G, "WORK", Path(d)):
                 out = DL.run("x")
-            vmd = (out / "04-验收表.md").read_text("utf-8")
-            self.assertIn("| 编号 | 任务 |", vmd)
-            self.assertNotIn("本期未验收", vmd)
+            vmd = (out / "04-驗收表.md").read_text("utf-8")
+            self.assertIn("| 編號 | 任務 |", vmd)
+            self.assertNotIn("本期未驗收", vmd)
 
 
 class TestReportDateConsistency(unittest.TestCase):
@@ -108,8 +108,8 @@ class TestReportDateConsistency(unittest.TestCase):
                     mock.patch.object(R, "run", side_effect=fake_run) as m:
                 out = DL.run("x")
             m.assert_called_once_with("x")
-            self.assertEqual((out / "01-诊断报告.md").read_text("utf-8"), "# 今日报告")
-            self.assertNotIn("诊断报告日期", (out / "README.md").read_text("utf-8"))
+            self.assertEqual((out / "01-診斷報告.md").read_text("utf-8"), "# 今日報告")
+            self.assertNotIn("診斷報告日期", (out / "README.md").read_text("utf-8"))
 
     def test_mismatch_noted_when_rerun_fails(self):
         with tempfile.TemporaryDirectory() as d:
@@ -118,8 +118,8 @@ class TestReportDateConsistency(unittest.TestCase):
                     mock.patch.object(R, "run", side_effect=RuntimeError("boom")):
                 out = DL.run("x")
             readme = (out / "README.md").read_text("utf-8")
-            self.assertIn("诊断报告日期 2026-07-26", readme)
-            self.assertIn("本期体检日期 2026-07-28", readme)
+            self.assertIn("診斷報告日期 2026-07-26", readme)
+            self.assertIn("本期體檢日期 2026-07-28", readme)
 
 
 if __name__ == "__main__":

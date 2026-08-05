@@ -664,7 +664,7 @@ def sheet(slug: str) -> Path:
             lines += [f"### {q.get('id')} · {q['text']}", "", "```answer", "", "```", ""]
     path = G.project_dir(slug) / "samples" / f"{G.today()}-manual.md"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines), "utf-8")
+    G.write_document(path, "\n".join(lines))
     G.info(f"采样表已导出：{path}")
     return path
 

@@ -24,7 +24,12 @@ GROUPS = ["推荐", "比较", "替代", "价格", "风险", "品牌验证", "场
 
 
 def _site_digest(slug: str, limit: int = 14000) -> str:
-    """把抓到的页面正文压成一份摘要喂给 LLM。首页和高分页优先。"""
+    """把抓到的页面内容压成摘要喂给 LLM。首页和高分页优先。
+
+    部分 SPA 只在浏览器端渲染正文，但仍会在初始 HTML 中提供 SEO metadata
+    和 JSON-LD。此时用这些可验证的页面资料作为降级输入，避免把成功抓取误判
+    为「没有抓取结果」。
+    """
     pages = G.read_jsonl(G.project_dir(slug) / "evidence" / "pages.jsonl")
     if not pages:
         return ""
@@ -35,10 +40,23 @@ def _site_digest(slug: str, limit: int = 14000) -> str:
 
     parts, used = [], 0
     for p in ordered:
-        if not p.get("text"):
+        page_text = (p.get("text") or "").strip()
+        if not page_text:
+            fallback = []
+            if p.get("meta_description"):
+                fallback.append(f"页面描述：{p['meta_description']}")
+            for heading in (p.get("h1") or []) + (p.get("h2") or []):
+                if heading:
+                    fallback.append(f"页面标题：{heading}")
+            if p.get("jsonld_raw"):
+                fallback.append(
+                    "结构化资料：" + json.dumps(p["jsonld_raw"], ensure_ascii=False, separators=(",", ":"))
+                )
+            page_text = "\n".join(fallback)
+        if not page_text:
             continue
         block = (f"\n## 页面：{p.get('title') or p['url']}\nURL: {p['url']}\n"
-                 f"{p['text'][:2600]}\n")
+                 f"{page_text[:2600]}\n")
         if used + len(block) > limit:
             break
         parts.append(block)
@@ -319,10 +337,10 @@ def run(slug: str, skip_llm: bool = False) -> dict:
     fp = G.project_dir(slug) / "content" / "facts.md"
     fp.parent.mkdir(parents=True, exist_ok=True)
     if fp.exists():
-        (fp.parent / f"facts.bootstrap-{G.today()}.md").write_text(render_facts(slug, brand), "utf-8")
+        G.write_document(fp.parent / f"facts.bootstrap-{G.today()}.md", render_facts(slug, brand))
         G.info("  已有 facts.md，自动版另存为 facts.bootstrap-<日期>.md，请人工合并")
     else:
-        fp.write_text(render_facts(slug, brand), "utf-8")
+        G.write_document(fp, render_facts(slug, brand))
 
     qs = cfg["questions"]
     G.info(f"完成：竞品 {len(cfg['competitors'])} 个、问题 {len(qs)} 题"

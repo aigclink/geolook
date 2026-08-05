@@ -4,6 +4,16 @@ import sys; sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 import geolib as G
 
 class TestJsonIO(unittest.TestCase):
+    def test_traditional_chinese_document_output(self):
+        source = "诊断报告：当前项目支持导出文件，运行后打开链接。"
+        expected = "診斷報告：目前專案支援匯出檔案，執行後打開連結。"
+        self.assertEqual(G.to_zh_tw(source), expected)
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "report.md"
+            G.write_document(p, source)
+            self.assertEqual(p.read_text("utf-8"), expected)
+            self.assertFalse(list(Path(d).glob("*.tmp")))
+
     def test_write_json_atomic(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "x.json"

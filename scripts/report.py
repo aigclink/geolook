@@ -358,7 +358,7 @@ def md_to_html(md: str) -> str:
 def build_html(title: str, md: str, cards: list[tuple[str, str]]) -> str:
     card_html = "".join(f'<div class="card"><div class="k">{html.escape(k)}</div><div class="v">{html.escape(v)}</div></div>' for k, v in cards)
     return (
-        f"<!doctype html><html lang=zh-CN><head><meta charset=utf-8>"
+        f"<!doctype html><html lang=zh-TW><head><meta charset=utf-8>"
         f'<meta name=viewport content="width=device-width,initial-scale=1">'
         f"<title>{html.escape(title)}</title><style>{CSS}</style></head><body><div class=wrap>"
         f'<div class="cards">{card_html}</div>{md_to_html(md)}</div></body></html>'
@@ -381,7 +381,7 @@ def run(slug: str) -> Path:
     pa = prev_audit(pdir)
 
     todos = collect_todos(audit)
-    md = build_markdown(cfg, audit, metrics, pm, pa, todos)
+    md = G.to_zh_tw(build_markdown(cfg, audit, metrics, pm, pa, todos))
 
     cards = [
         ("站点均分", str(audit["avg_score"])),
@@ -393,9 +393,12 @@ def run(slug: str) -> Path:
 
     outdir = pdir / "reports" / G.today()
     outdir.mkdir(parents=True, exist_ok=True)
-    (outdir / "report.md").write_text(md, "utf-8")
-    (outdir / "report.html").write_text(build_html(f"{cfg['brand']['name']} GEO 报告 {G.today()}", md, cards), "utf-8")
-    (pdir / "reports" / "latest.md").write_text(md, "utf-8")
+    G.write_document(outdir / "report.md", md)
+    G.write_document(
+        outdir / "report.html",
+        build_html(f"{cfg['brand']['name']} GEO 报告 {G.today()}", md, cards),
+    )
+    G.write_document(pdir / "reports" / "latest.md", md)
     G.write_json(pdir / "todos.json", todos)
 
     # 归档本期 audit，供下期算 delta

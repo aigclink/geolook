@@ -427,25 +427,25 @@ def run(slug: str, which: list[str] | None = None, with_draft: bool = False,
     if "llms" in which:
         (adir).mkdir(parents=True, exist_ok=True)
         if market in ("cn", "both"):
-            (adir / "llms.txt").write_text(gen_llms_txt(slug, "zh"), "utf-8")
+            G.write_document(adir / "llms.txt", gen_llms_txt(slug, "zh"))
             made.append("assets/llms.txt")
         if market in ("global", "both"):
-            (adir / "llms.en.txt").write_text(gen_llms_txt(slug, "en"), "utf-8")
+            G.write_document(adir / "llms.en.txt", gen_llms_txt(slug, "en"))
             made.append("assets/llms.en.txt")
 
     if "jsonld" in which:
         d = adir / "jsonld"
         d.mkdir(parents=True, exist_ok=True)
         for name, obj in gen_jsonld(slug).items():
-            (d / f"{name}.json").write_text(json.dumps(obj, ensure_ascii=False, indent=2), "utf-8")
+            G.write_document(d / f"{name}.json", json.dumps(obj, ensure_ascii=False, indent=2))
             made.append(f"assets/jsonld/{name}.json")
 
     if "snippets" in which:
         d = adir / "snippets"
         d.mkdir(parents=True, exist_ok=True)
         for lang in (["zh"] if market == "cn" else ["en"] if market == "global" else ["zh", "en"]):
-            (d / f"definition.{lang}.html").write_text(gen_definition_block(slug, lang), "utf-8")
-            (d / f"faq.{lang}.html").write_text(gen_faq_block(slug, lang), "utf-8")
+            G.write_document(d / f"definition.{lang}.html", gen_definition_block(slug, lang))
+            G.write_document(d / f"faq.{lang}.html", gen_faq_block(slug, lang))
             made += [f"assets/snippets/definition.{lang}.html", f"assets/snippets/faq.{lang}.html"]
 
     outlines = []
@@ -467,9 +467,12 @@ def run(slug: str, which: list[str] | None = None, with_draft: bool = False,
                      f"- 证据：{o['requirements']['evidence']}", ""]
             if o["facts_to_use"]:
                 body += ["## 可用的已核实事实", ""] + [f"- {x}" for x in o["facts_to_use"]] + [""]
-            (d / f"{o['question_id']}.md").write_text("\n".join(body), "utf-8")
+            G.write_document(d / f"{o['question_id']}.md", "\n".join(body))
         made.append(f"assets/outlines/（{len(outlines)} 份）")
-        G.write_json(adir / "outlines" / "_index.json", outlines)
+        G.write_document(
+            adir / "outlines" / "_index.json",
+            json.dumps(outlines, ensure_ascii=False, indent=2),
+        )
 
     if with_draft and outlines:
         d = adir / "drafts"
@@ -478,8 +481,10 @@ def run(slug: str, which: list[str] | None = None, with_draft: bool = False,
             G.info(f"起草 {o['question_id']} · {o['target_question'][:30]}…")
             text = draft(slug, o)
             if text:
-                (d / f"{o['question_id']}.md").write_text(
-                    f"<!-- 初稿，需人工核实所有事实后再发布 · {G.today()} -->\n\n" + text, "utf-8")
+                G.write_document(
+                    d / f"{o['question_id']}.md",
+                    f"<!-- 初稿，需人工核实所有事实后再发布 · {G.today()} -->\n\n" + text,
+                )
                 made.append(f"assets/drafts/{o['question_id']}.md")
             else:
                 G.info("  没有可用的 LLM API Key，跳过起草")

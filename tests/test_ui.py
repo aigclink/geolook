@@ -37,6 +37,15 @@ class DocumentLangCase(unittest.TestCase):
         self.assertIsNotNone(target)
         self.assertEqual(len(source.group(1)), len(target.group(1)))
 
+    def test_generated_document_links_use_traditional_filenames(self):
+        self.assertIn("3-GEO執行方案.html", self.html)
+        self.assertIn("03-工單表.csv", self.html)
+
+    def test_shutdown_button_requires_confirmation_and_posts(self):
+        self.assertIn('onclick="shutdownServer()"', self.html)
+        self.assertIn("post('/api/shutdown',{confirm:true})", self.html)
+        self.assertIn("確定關閉 GeoLook 伺服器", self.html)
+
 
 if __name__ == "__main__":
     unittest.main()

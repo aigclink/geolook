@@ -272,31 +272,37 @@ def run(slug: str) -> Path:
     reports = sorted((pdir / "reports").glob("2*")) if (pdir / "reports").exists() else []
     if reports:
         import shutil
-        for src, dst in ((reports[-1] / "report.md", "1-GEO诊断报告.md"),
-                         (reports[-1] / "report.html", "1-GEO诊断报告.html")):
+        for src, dst in ((reports[-1] / "report.md", "1-GEO診斷報告.md"),
+                         (reports[-1] / "report.html", "1-GEO診斷報告.html")):
             if src.exists():
                 shutil.copy2(src, out / dst)
 
     audit = G.read_json(pdir / "audit.json", {})
     td = T.load(slug)
 
-    opt = optimization_plan(slug)
-    (out / "2-GEO优化方案.md").write_text(opt, "utf-8")
-    (out / "2-GEO优化方案.html").write_text(
+    opt = G.to_zh_tw(optimization_plan(slug))
+    G.write_document(out / "2-GEO最佳化方案.md", opt)
+    G.write_document(out / "2-GEO最佳化方案.html",
         R.build_html(f"{name} · GEO 优化方案", opt,
                      [("站点均分", str(audit.get("avg_score", "—"))),
                       ("抓取页数", str(audit.get("page_count", "—"))),
-                      ("工单总数", str(td.get("summary", {}).get("total", 0)))]), "utf-8")
+                      ("工单总数", str(td.get("summary", {}).get("total", 0)))]))
 
-    exe = execution_plan(slug)
-    (out / "3-GEO执行方案.md").write_text(exe, "utf-8")
+    exe = G.to_zh_tw(execution_plan(slug))
+    G.write_document(out / "3-GEO執行方案.md", exe)
     s = td.get("summary", {})
-    (out / "3-GEO执行方案.html").write_text(
+    G.write_document(out / "3-GEO執行方案.html",
         R.build_html(f"{name} · GEO 执行方案", exe,
                      [("工单总数", str(s.get("total", 0))),
                       ("P0", str(s.get("by_priority", {}).get("P0", 0))),
                       ("可自动验收", str(s.get("auto_verifiable", 0))),
-                      ("已完成", str(s.get("by_status", {}).get("done", 0)))]), "utf-8")
+                      ("已完成", str(s.get("by_status", {}).get("done", 0)))]))
+
+    # 清除舊版簡體檔名，避免儀表板同時顯示兩套交付物。
+    for legacy in ("1-GEO诊断报告.md", "1-GEO诊断报告.html",
+                   "2-GEO优化方案.md", "2-GEO优化方案.html",
+                   "3-GEO执行方案.md", "3-GEO执行方案.html"):
+        (out / legacy).unlink(missing_ok=True)
 
     G.info(f"三份交付物已生成 → {out}")
     return out
