@@ -138,7 +138,12 @@ MANUAL_ONLY = {
     "doubao_app": ("豆包 App / 网页版（与方舟 API 结果不同，需分开采）", "cn"),
     "chatgpt": ("ChatGPT 网页版（开 Search）", "global"),
     "claude_web": ("Claude 网页版（开 Web Search）", "global"),
+    "google_aio": ("Google AI Overviews（搜索页顶部 AI 摘要，无则记「未触发」）", "global"),
+    "metaso": ("秘塔AI搜索（引用为角标非链接，答案可采、引用常为 0 条）", "cn"),
 }
+
+# 买家意图分组：手动周检只查这几组就够了——商业价值最高、也最能反映「AI 推荐了谁」
+BUYER_GROUPS = {"价格", "推荐", "比较", "替代"}
 
 
 def market_of(platform: str) -> str:
@@ -641,28 +646,43 @@ def run(slug: str, platforms: list[str] | None = None, repeat: int = 1, limit: i
     return metrics
 
 
-def sheet(slug: str) -> Path:
-    """导出人工/浏览器采样清单（Markdown），采完把答案粘回同一文件再 import。"""
+def sheet(slug: str, intent: str | None = None, limit: int | None = None) -> Path:
+    """导出人工/浏览器采样清单（Markdown），采完把答案粘回同一文件再 import。
+
+    intent="buyer" 只出买家意图题（价格/推荐/比较/替代），limit 控制每平台题数——
+    「每周 15–20 条买家题」的轻量周检就是 --intent buyer --limit 20。"""
     cfg = G.load_config(slug)
     plats = [p for p in cfg.get("platforms", []) if p in MANUAL_ONLY or not available(p)]
+    tag = "buyer" if intent == "buyer" else "manual"
     lines = [
-        f"# {cfg['brand']['name']} · AI 答案人工采样表 · {G.today()}",
+        f"# {cfg['brand']['name']} · AI 答案人工采样表 · {G.today()}"
+        + ("（买家意图周检）" if intent == "buyer" else ""),
         "",
         "用法：每个平台逐题提问，把**完整答案原文**（含引用链接）粘到对应的 ```answer 代码块里，",
         "然后运行 `python3 scripts/geo.py sample-import --slug " + slug + " --file <本文件>`。",
         "",
-        "留空的题目会被跳过，不会被当成「品牌未被提及」。",
+        "**采样纪律（违反任何一条，这份样本就不算 A 级证据）：**",
+        "",
+        "1. **无痕/隐私模式**，且不登录账号——登录态的个性化会污染样本，测出来的是「AI 对你的画像」不是「AI 对大众的回答」",
+        "2. 每题**新开对话**，不连续追问——上下文会让后面的答案带着前面的偏置",
+        "3. 复制**完整答案原文**，包括引用链接/来源列表，不要只摘品牌相关的句子",
+        "4. 答案里没有你的品牌时照样粘贴——「没提到」正是最重要的数据，别只记提到的",
+        "5. 留空的题目会被跳过，不会被当成「品牌未被提及」",
         "",
     ]
     for plat in plats:
         qs = questions_for(cfg, plat)
+        if intent == "buyer":
+            qs = [q for q in qs if q.get("group") in BUYER_GROUPS]
+        if limit:
+            qs = qs[:limit]
         if not qs:
             continue
         mk = "国内" if market_of(plat) == "cn" else "海外"
         lines += [f"## platform: {plat}", f"> {label_of(plat)}（{mk}市场 · {len(qs)} 题）", ""]
         for q in qs:
             lines += [f"### {q.get('id')} · {q['text']}", "", "```answer", "", "```", ""]
-    path = G.project_dir(slug) / "samples" / f"{G.today()}-manual.md"
+    path = G.project_dir(slug) / "samples" / f"{G.today()}-{tag}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines), "utf-8")
     G.info(f"采样表已导出：{path}")
@@ -700,16 +720,193 @@ def sample_import(slug: str, file: str) -> dict:
 
     if not rows:
         G.die("没解析到任何答案，检查 ```answer 代码块是否填写")
+    metrics = store_manual_rows(slug, cfg, rows)
+    G.info(f"导入 {len(rows)} 条人工样本")
+    return metrics
+
+
+# ---------------------------------------------------------------- 样本库（答案元数据）
+
+def sample_key(r: dict) -> str:
+    """样本唯一键。与 dedup_rows 同口径（同日同平台同题同轮同模式唯一）加上日期。"""
+    return "|".join(str(r.get(k, "")) for k in
+                    ("date", "platform", "question_id", "round", "sample_mode"))
+
+
+def _sample_files(slug: str) -> list[Path]:
+    d = G.project_dir(slug) / "samples"
+    return sorted(d.glob("*.jsonl")) if d.exists() else []
+
+
+def list_samples(slug: str, date: str = "", platform: str = "", qid: str = "",
+                 flag: str = "", limit: int = 300) -> dict:
+    """列出样本元数据（不含全文，全文按需单取）。flag: review=待复核 / edited=人工改过。"""
+    rows, dates, plats = [], set(), set()
+    for f in _sample_files(slug):
+        for r in G.read_jsonl(f):
+            d = r.get("date") or f.stem
+            dates.add(d)
+            plats.add(r.get("platform"))
+            if date and d != date:
+                continue
+            if platform and r.get("platform") != platform:
+                continue
+            if qid and r.get("question_id") != qid:
+                continue
+            if flag == "review" and not r.get("needs_review"):
+                continue
+            if flag == "edited" and not r.get("manual_override"):
+                continue
+            a = r.get("analysis") or {}
+            rows.append({
+                "key": sample_key(r), "date": d, "ts": r.get("ts"),
+                "platform": r.get("platform"), "platform_name": r.get("platform_name"),
+                "market": r.get("market"), "terminal": r.get("terminal"),
+                "sample_mode": r.get("sample_mode"), "evidence_level": r.get("evidence_level"),
+                "session_mode": r.get("session_mode"), "session_label": r.get("session_label"),
+                "question_id": r.get("question_id"), "question": r.get("question"),
+                "ok": r.get("ok"), "answer_chars": a.get("answer_chars") or len(r.get("answer") or ""),
+                "brand_mentioned": a.get("brand_mentioned"), "brand_rank": a.get("brand_rank"),
+                "competitors": a.get("competitors_mentioned") or [],
+                "cited_domains": a.get("cited_domains") or [],
+                "own_domain_cited": a.get("own_domain_cited"),
+                "citations": len(r.get("citations") or []),
+                "needs_review": bool(r.get("needs_review")),
+                "negative_cues": a.get("negative_cues") or [],
+                "manual_override": bool(r.get("manual_override")),
+                "review_note": r.get("review_note") or "",
+            })
+    rows.sort(key=lambda x: (x["date"], x["platform"], x["question_id"] or ""), reverse=True)
+    return {"rows": rows[:limit], "total": len(rows),
+            "dates": sorted(dates, reverse=True), "platforms": sorted(p for p in plats if p)}
+
+
+def get_sample(slug: str, key: str) -> dict | None:
+    for f in _sample_files(slug):
+        for r in G.read_jsonl(f):
+            if sample_key(r) == key:
+                return r
+    return None
+
+
+# 只允许改这些：人工复核纠正机器判读，不能凭空改出一条新样本
+_PATCHABLE = {"brand_mentioned", "brand_rank", "competitors_mentioned"}
+
+
+def patch_sample(slug: str, key: str, patch: dict) -> dict:
+    """人工复核：纠正判读、标注、或删除坏样本。改完重算当日指标。
+
+    正则判读会有假阳性/假阴性（品牌名撞词、否定语境、竞品别名），这里是唯一的纠正入口；
+    改过的样本打 manual_override，重跑采样不会覆盖人工结论。"""
+    target_date = None
+    with G.project_lock(slug):
+        cfg = G.load_config(slug)
+        for f in _sample_files(slug):
+            rows = G.read_jsonl(f)
+            hit = next((i for i, r in enumerate(rows) if sample_key(r) == key), None)
+            if hit is None:
+                continue
+            r = rows[hit]
+            target_date = r.get("date") or f.stem
+            if patch.get("delete"):
+                rows.pop(hit)
+            else:
+                a = r.setdefault("analysis", {})
+                for k in _PATCHABLE:
+                    if k in patch:
+                        a[k] = patch[k]
+                        r["manual_override"] = True
+                if "evidence_level" in patch:
+                    r["evidence_level"] = str(patch["evidence_level"])[:32]
+                    r["manual_override"] = True
+                if "review_note" in patch:
+                    r["review_note"] = str(patch["review_note"])[:500]
+                if "needs_review" in patch:
+                    r["needs_review"] = bool(patch["needs_review"])
+                r["reviewed_at"] = G.now_iso()
+            G.write_jsonl(f, rows)
+            break
+        else:
+            return {"ok": False, "error": "找不到该样本"}
+        metrics = recompute_metrics(slug, cfg, target_date)
+    return {"ok": True, "date": target_date, "sample_count": metrics.get("sample_count", 0)}
+
+
+def recompute_metrics(slug: str, cfg: dict, date: str) -> dict:
+    pdir = G.project_dir(slug)
+    path = pdir / "samples" / f"{date}.jsonl"
+    rows = [r for r in dedup_rows(G.read_jsonl(path)) if r.get("ok")]
+    metrics = {
+        "slug": slug, "date": date, "generated_at": G.now_iso(),
+        "question_count": len(cfg.get("questions", [])), "sample_count": len(rows),
+        "platforms": aggregate(rows, cfg),
+    }
+    G.write_json(pdir / "metrics" / f"{date}.json", metrics)
+    return metrics
+
+
+def store_manual_rows(slug: str, cfg: dict, rows: list[dict]) -> dict:
+    """人工/插件样本的统一落库：追加 jsonl → 去重 → 重算当日指标 → 竞品确认。"""
     pdir = G.project_dir(slug)
     path = pdir / "samples" / f"{G.today()}.jsonl"
     G.write_jsonl(path, G.read_jsonl(path) + rows)
     all_rows = [r for r in dedup_rows(G.read_jsonl(path)) if r.get("ok")]
     metrics = {
         "slug": slug, "date": G.today(), "generated_at": G.now_iso(),
-        "question_count": len(qmap), "sample_count": len(all_rows),
+        "question_count": len(cfg.get("questions", [])), "sample_count": len(all_rows),
         "platforms": aggregate(all_rows, cfg),
     }
     G.write_json(pdir / "metrics" / f"{G.today()}.json", metrics)
     confirm_competitors(slug, all_rows)
-    G.info(f"导入 {len(rows)} 条人工样本 → {path}")
     return metrics
+
+
+# 采样会话环境。和「API≠Web、Web≠App」同一个道理：登录态的个性化会改变答案，
+# 不同环境采的样本不该混在一起算平均。插件每次回传都必须带上它。
+SESSION_MODES = {
+    "sandbox": ("一次性沙箱（无历史无 Cookie，未登录）", "A_人工真实样本"),
+    "incognito": ("无痕未登录", "A_人工真实样本"),
+    "clean_profile": ("专用采样 Profile（已登录，无自查历史）", "A_人工真实样本"),
+    "personal": ("个人日常账号（含个性化，仅供参考）", "D_待复核"),
+}
+
+
+def collect_import(slug: str, records: list[dict]) -> dict:
+    """浏览器插件回传的样本。与手动表同口径：A 级证据、web 终端；
+    区别是 citations 由插件从页面结构化提取，比手抄更全。
+
+    session_mode 决定证据等级：个人日常账号采的样本降级为 D_待复核——
+    它测的是「AI 对你的画像」，不是「陌生买家看到什么」，不能当可见性证据用。"""
+    cfg = G.load_config(slug)
+    qmap = {q.get("id"): q["text"] for q in cfg.get("questions", [])}
+    known = set(PROVIDERS) | set(MANUAL_ONLY)
+    rows = []
+    for r in records:
+        plat = str(r.get("platform") or "").strip()
+        answer = str(r.get("answer") or "").strip()
+        if plat not in known or not answer:
+            continue
+        cites = [{"url": str(c.get("url", ""))[:500], "title": str(c.get("title", ""))[:200]}
+                 for c in (r.get("citations") or []) if isinstance(c, dict) and c.get("url")][:30]
+        sm = str(r.get("session_mode") or "incognito")
+        sm = sm if sm in SESSION_MODES else "incognito"
+        rec = {
+            "date": G.today(), "ts": G.now_iso(),
+            "platform": plat, "platform_name": label_of(plat), "market": market_of(plat),
+            "terminal": "web", "sample_mode": "extension",
+            "session_mode": sm, "session_label": SESSION_MODES[sm][0],
+            "evidence_level": SESSION_MODES[sm][1], "search_enabled": True,
+            "question_id": str(r.get("question_id") or "")[:32],
+            "question": qmap.get(r.get("question_id"), str(r.get("question") or "")[:500]),
+            "round": 1, "ok": True, "error": None,
+            "answer": answer[:20000], "citations": cites,
+            "page_url": str(r.get("page_url") or "")[:500],
+        }
+        rec["analysis"] = analyze_answer(rec["answer"], cfg, citations=cites)
+        rec["needs_review"] = bool(rec["analysis"].get("needs_review"))
+        rows.append(rec)
+    if not rows:
+        return {"ok": False, "imported": 0, "error": "没有可导入的样本（平台码未知或答案为空）"}
+    metrics = store_manual_rows(slug, cfg, rows)
+    G.info(f"插件回传导入 {len(rows)} 条样本")
+    return {"ok": True, "imported": len(rows), "sample_count": metrics["sample_count"]}
