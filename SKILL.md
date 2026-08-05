@@ -54,7 +54,9 @@ python3 scripts/geo.py new --url https://example.com --market both
 ### 界面（推荐）
 
 ```bash
-python3 scripts/geo.py ui        # 默认 http://127.0.0.1:8765
+python3 scripts/geo.py ui        # 默认 http://127.0.0.1:8765（前台运行）
+./scripts/service.sh install     # 或注册为 macOS 常驻服务：登录自启、崩溃自动拉起，
+                                 # 关终端不停；周期复跑因此能按时触发。uninstall 卸载
 ```
 
 **全流程都在界面上**，不用记命令：新建项目、编辑配置与问题库、写事实卡、
