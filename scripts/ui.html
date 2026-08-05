@@ -1545,11 +1545,33 @@ function vPlan(){
         <td><div class="row" style="gap:4px">${['todo','doing','blocked','done'].map(s=>
           `<button class="btn ${t.status===s?'btn-primary':'btn-ghost'}" style="font-size:11px;padding:2px 7px"
             onclick="setTask(${esc(JSON.stringify(t.id))},'${s}')">${({todo:'待开始',doing:'进行中',blocked:'受阻',done:'完成'})[s]}</button>`).join('')}</div></td>
-        <td><div class="row" style="gap:4px">${t.package==='内容矩阵'?`<button class="btn btn-ghost" style="font-size:12px" onclick="go('workbench')">打开</button>
+        <td><div class="row" style="gap:4px">${t.package==='内容矩阵'?`<button class="btn btn-ghost" style="font-size:12px" title="直达这条任务最该写的问题" onclick="wbFromTask(${esc(JSON.stringify(t.id))})">打开</button>
           <button class="btn btn-ghost" style="font-size:12px;color:var(--a300)" title="成稿发布状态与逐篇发布" onclick="pendPubModal()">发布</button>`:''}</div></td>
       </tr>`).join('')}
     </tbody></table></div>
   </div>`;
+}
+function taskWbTarget(t){
+  // 行动计划 → 工作台的落点解析：尽量落到「这条任务最该写的那道题」，而不是列表页
+  for(const a of (t.assets||[])){const m=String(a).match(/\bq\d{3}\b/);if(m)return m[0]}   // 资产已带 qid
+  const qs=demandSort((D.analytics.questions||[]).filter(q=>!q.brand_probe));
+  const undone=qs.filter(q=>q.content!=='已成稿');
+  const bm=(t.title||'').match(/「(定义|数字事实|对比|操作步骤|FAQ)」/);
+  if(bm){
+    // 块 → 最需要该块的问题分组（对应 blueprint GROUP_PLAN 的内容形态）
+    const bg={'对比':['比较','替代'],'操作步骤':['场景'],'定义':['价格','风险','品牌验证'],
+              '数字事实':['推荐','比较','场景'],'FAQ':['价格','风险']};
+    const hit=undone.find(q=>(bg[bm[1]]||[]).includes(q.group));
+    if(hit)return hit.id;
+  }
+  if(/英文|中英/.test(t.title||'')){const hit=undone.find(q=>q.market==='global');if(hit)return hit.id}
+  return (undone[0]||qs[0]||{}).id||null;   // 兜底：选题池顶部
+}
+function wbFromTask(id){
+  const t=(D.tasks||[]).find(x=>x.id===id);
+  const wq=t?taskWbTarget(t):null;
+  closeModal&&closeModal();
+  go('workbench',wq?{wq}:undefined);
 }
 function taskModal(id){
   const t=(D.tasks||[]).find(x=>x.id===id);
@@ -1574,7 +1596,7 @@ function taskModal(id){
     ${ev.length?`<div style="font-size:12px;color:var(--t600);margin:12px 0 3px">最近验收记录</div>
       ${ev.map(e=>`<div style="font-size:11.5px;color:var(--t500);padding:2px 0">${esc((e.at||'').slice(0,16).replace('T',' '))} · ${({pass:'✓ 通过',fail:'✗ 未达标',manual:'待人工'})[e.result]||esc(e.result)} · ${esc(e.note||'')}</div>`).join('')}`:''}
     <div class="row" style="justify-content:flex-end;margin-top:14px">
-      ${t.package==='内容矩阵'?`<button class="btn btn-secondary" style="margin-right:auto" onclick="closeModal();go('workbench')">去内容工作台</button>`:''}
+      ${t.package==='内容矩阵'?`<button class="btn btn-secondary" style="margin-right:auto" onclick="wbFromTask(${esc(JSON.stringify(t.id))})">去内容工作台</button>`:''}
       <button class="btn btn-primary" onclick="closeModal()">关闭</button></div>`);
 }
 async function setTask(id,status){
