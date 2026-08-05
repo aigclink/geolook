@@ -144,7 +144,11 @@ pre.log{background:var(--deep);border-radius:var(--r-md);box-shadow:var(--sh-sm)
 const $=(s,r=document)=>r.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pct=v=>v==null?'—':(v*100).toFixed(v>0&&v<0.095?1:0)+'%';
-const api=async(u,o)=>{try{const r=await fetch(u,o);if(!r.ok)return{error:`HTTP ${r.status}`};return await r.json().catch(()=>({error:'响应不是 JSON'}))}catch(e){return{error:'连接失败：服务未响应'}}};
+// 非 2xx 也尽量读 body：服务端错误响应带具体原因（如「缺凭证：GITHUB_TOKEN」），
+// 只报 HTTP 状态码会把可行动的信息丢掉
+const api=async(u,o)=>{try{const r=await fetch(u,o);const j=await r.json().catch(()=>null);
+  if(!r.ok)return (j&&j.error)?j:{error:`HTTP ${r.status}`};
+  return j??{error:'响应不是 JSON'}}catch(e){return{error:'连接失败：服务未响应'}}};
 const mktLabel=m=>m==='cn'?'国内':m==='global'?'海外':'通用';
 const diagTag=d=>{if(!d)return'<span style="font-size:12px;color:var(--t600)">—</span>';
   const cls=d.sev==='P0'?'tag-accent':d.sev==='P1'?'pill-warn':d.sev==='P2'?'tag-dim':'pill-good';
@@ -1735,27 +1739,43 @@ async function pubModal(rel){
     rel='content/'+WB.cur.path;
   }
   if(!PUB)PUB=await api('/api/publish/'+SLUG);
-  const ready=((PUB&&PUB.publishers)||[]).filter(x=>!x.missing.length);
-  const recs=((PUB&&PUB.records)||[]).filter(r=>r.path===rel).slice(-5).reverse();
+  const pubs=(PUB&&PUB.publishers)||[];
+  const okRecs=((PUB&&PUB.records)||[]).filter(r=>r.path===rel&&r.ok);
+  const lastOf=code=>okRecs.filter(r=>r.platform===code).slice(-1)[0];
+  // 记住上次勾选的渠道组合：同一批文章通常发同一组渠道
+  let sel=[];try{sel=JSON.parse(localStorage.getItem('pubSel:'+SLUG)||'[]')}catch(e){}
   modal(`<h4 style="font-size:17px">发布到渠道</h4>
-    <p class="muted" style="font-size:12px;margin-top:4px">文件：${esc(rel)}。发布是对外动作——点一次发一次；公众号 / WordPress 只建草稿，到各自后台确认后才对外。</p>
-    ${ready.map(x=>`<div class="row" style="padding:7px 0;box-shadow:inset 0 -1px 0 var(--line)">
+    <p class="muted" style="font-size:12px;margin-top:4px">文件：${esc(rel)}。勾选要发布的渠道——只发这一篇；公众号 / WordPress 只建草稿，到各自后台确认后才对外。</p>
+    ${pubs.map(x=>{const ok=!x.missing.length,done=lastOf(x.code);
+      return `<label class="row" style="padding:7px 0;box-shadow:inset 0 -1px 0 var(--line);cursor:${ok?'pointer':'default'};${ok?'':'opacity:.55'}">
+      <input type="checkbox" class="pub-ch" value="${x.code}" ${ok?'':'disabled'} ${ok&&sel.includes(x.code)?'checked':''} style="accent-color:var(--accent)">
       <span style="flex:1;font-size:13px">${esc(x.name)}<span class="muted" style="font-size:11px;margin-left:6px">${esc(x.note)}</span></span>
-      <button class="btn btn-primary" style="font-size:12px" onclick="doPublish('${x.code}',${esc(JSON.stringify(rel))})">发布</button></div>`).join('')
-      ||'<div class="muted" style="font-size:12.5px">还没有就绪的渠道——到「设置 → 发布渠道」配置凭证</div>'}
-    ${recs.length?`<div style="margin-top:10px"><div style="font-size:12px;color:var(--t500);margin-bottom:4px">该文件的发布记录</div>
-      ${recs.map(r=>`<div style="font-size:12px;color:var(--t400);padding:3px 0">${r.ok?'✓':'✗'} ${esc((r.at||'').slice(0,16).replace('T',' '))} ${esc(r.platform_name)} ${r.url?`<a href="${esc(r.url)}" target="_blank" style="color:var(--a300)">${esc(r.url)}</a>`:esc(r.note||r.error||'')}</div>`).join('')}</div>`:''}
+      ${done?`<span style="font-size:11px;color:var(--a300)" title="${esc(done.url||'')}">✓ 已发 ${esc((done.at||'').slice(5,10))}</span>`:''}
+      ${ok?'':`<button class="btn btn-ghost" style="font-size:11.5px;padding:2px 8px" onclick="closeModal();go('settings')">缺凭证 · 去配置</button>`}
+    </label>`}).join('')}
+    <div id="pubprog" style="margin-top:8px"></div>
     <div class="row" style="justify-content:flex-end;margin-top:12px">
-      <button class="btn btn-ghost" onclick="closeModal();go('settings')">渠道配置</button>
-      <button class="btn btn-secondary" onclick="closeModal()">关闭</button></div>`);
+      <button class="btn btn-ghost" style="margin-right:auto" onclick="closeModal();go('settings')">渠道配置</button>
+      <button class="btn btn-secondary" onclick="closeModal()">关闭</button>
+      <button class="btn btn-primary" onclick="doPublishSel(${esc(JSON.stringify(rel))})">发布到已选渠道</button></div>`);
 }
-async function doPublish(code,rel){
-  const name=((PUB&&PUB.publishers)||[]).find(x=>x.code===code)?.name||code;
-  if(!confirm(`确认发布「${rel}」到「${name}」？`))return;
-  const r=await post('/api/publish/'+SLUG,{platform:code,path:rel});
-  toast(r.ok?('已发布'+(r.url?'：'+r.url:(r.note?'，'+r.note:''))):('发布失败：'+(r.error||'')),r.ok?'':'err');
-  PUB=null;
-  if(r.ok){await load(SLUG,true);pubModal(rel)}   // 刷新 content_pub，状态立即同步到计划页/问题库
+async function doPublishSel(rel){
+  const codes=[...document.querySelectorAll('.pub-ch:checked')].map(e=>e.value);
+  if(!codes.length){toast('先勾选至少一个渠道（没有可勾的先去设置配凭证）','err');return}
+  localStorage.setItem('pubSel:'+SLUG,JSON.stringify(codes));
+  const names=codes.map(c=>((PUB&&PUB.publishers)||[]).find(x=>x.code===c)?.name||c);
+  if(!confirm(`发布「${rel}」到 ${codes.length} 个渠道：${names.join('、')}\n\n公众号/WordPress 只建草稿。确认？`))return;
+  const prog=$('#pubprog');let okN=0;
+  for(let i=0;i<codes.length;i++){
+    const line=document.createElement('div');
+    line.style.cssText='font-size:12px;padding:3px 0;color:var(--t400)';
+    line.textContent=`→ ${names[i]} 发布中…`;prog.appendChild(line);
+    const r=await post('/api/publish/'+SLUG,{platform:codes[i],path:rel});
+    if(r.ok){okN++;line.innerHTML=`✓ ${esc(names[i])} 已发布 ${r.url?`<a href="${esc(r.url)}" target="_blank" style="color:var(--a300)">${esc(r.url.slice(0,50))}</a>`:esc(r.note||'')}`}
+    else line.innerHTML=`<span style="color:var(--accent)">✗ ${esc(names[i])} 失败：${esc(r.error||'')}</span>`;
+  }
+  toast(okN===codes.length?`已发布到 ${okN} 个渠道`:`${okN}/${codes.length} 个渠道成功，失败的看弹窗明细`,okN===codes.length?'':'err');
+  PUB=null;await load(SLUG,true);   // 刷新 content_pub：计划页/问题库/清单状态同步，弹窗保留结果明细
 }
 async function wbSave(){
   WB.text=$('#wbtext').value;
