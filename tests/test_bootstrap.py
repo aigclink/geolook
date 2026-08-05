@@ -60,6 +60,21 @@ class TestHomepageFirst(WorkDirCase):
         self.assertIn(home, blocks[0], "摘要首块必须是首页（pages.jsonl 第一条），而不是高分页")
         self.assertNotIn(deep, blocks[0])
 
+    def test_spa_metadata_and_jsonld_are_used_when_body_is_empty(self):
+        home = "https://t.example.com/"
+        G.write_jsonl(self.pdir / "evidence" / "pages.jsonl", [{
+            "url": home,
+            "title": "测试品牌 - 全球服务",
+            "meta_description": "提供全球数字服务。",
+            "text": "",
+            "word_count": 0,
+            "jsonld_raw": [{"@type": "Organization", "name": "测试品牌"}],
+        }])
+        digest = B._site_digest(self.slug)
+        self.assertIn("提供全球数字服务。", digest)
+        self.assertIn("测试品牌", digest)
+        self.assertIn("Organization", digest)
+
 
 class TestCompetitorConfirmation(WorkDirCase):
     def _manual_file(self, answer):

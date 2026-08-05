@@ -95,5 +95,11 @@ class TestMarketAvgCards(unittest.TestCase):
         self.assertEqual(R.market_avg_cards(None), [])
 
 
+class TestTraditionalHtml(unittest.TestCase):
+    def test_report_html_declares_traditional_chinese(self):
+        html = R.build_html("診斷報告", "# 測試", [])
+        self.assertIn("<html lang=zh-TW>", html)
+
+
 if __name__ == "__main__":
     unittest.main()

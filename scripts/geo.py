@@ -153,9 +153,9 @@ def cmd_new(a):
     deliver.run(slug)
     G.info("")
     G.info(f"完成。交付物在 work/{slug}/deliverables/：")
-    G.info("  1-GEO诊断报告.html   现在什么样")
-    G.info("  2-GEO优化方案.html   应该改成什么样")
-    G.info("  3-GEO执行方案.html   谁在什么时候做什么")
+    G.info("  1-GEO診斷報告.html   現在什麼樣")
+    G.info("  2-GEO最佳化方案.html   應該改成什麼樣")
+    G.info("  3-GEO執行方案.html   誰在什麼時候做什麼")
     G.info("")
     G.info("下一步：打开工作台核对自动推导的品牌事实与问题库（标「待确认」的需人工补齐）")
     G.info("  python3 scripts/geo.py ui")
@@ -425,7 +425,7 @@ def cmd_serve(a):
 def cmd_ui(a):
     import dashboard
 
-    dashboard.run(port=a.port, open_browser=not a.no_open)
+    dashboard.run(host=a.host, port=a.port, open_browser=not a.no_open)
 
 
 def cmd_list(a):
@@ -582,6 +582,8 @@ def main():
     s.set_defaults(func=cmd_serve)
 
     s = sub.add_parser("ui", help="启动可观测看板（趋势、工单、信源、验收历史）")
+    s.add_argument("--host", default="127.0.0.1",
+                   help="监听地址（默认 127.0.0.1；可指定 Tailscale IP 供 Tailnet 访问）")
     s.add_argument("--port", type=int, default=8765)
     s.add_argument("--no-open", action="store_true", dest="no_open")
     s.set_defaults(func=cmd_ui)

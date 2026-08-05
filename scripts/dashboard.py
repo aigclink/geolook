@@ -390,6 +390,15 @@ class Handler(BaseHTTPRequestHandler):
                 job = J.start(body["slug"], body["action"], body.get("params") or {})
                 return self._json({"ok": True, "job": job})
 
+            if p == "/api/shutdown":
+                if body.get("confirm") is not True:
+                    return self._json({"ok": False, "error": "需要明確確認關閉伺服器"}, 400)
+                # 先完整送出 HTTP 回應，再由另一執行緒停止 serve_forever；直接在
+                # request handler 內 shutdown 可能造成目前請求無法完成。
+                self._json({"ok": True, "message": "GeoLook 伺服器正在關閉"})
+                threading.Thread(target=self.server.shutdown, daemon=True).start()
+                return
+
             if p.startswith("/api/job/") and p.endswith("/stop"):
                 jid = p[len("/api/job/"):-len("/stop")]
                 return self._json({"ok": J.stop(jid)})
@@ -591,11 +600,11 @@ def _monitor_loop():
         time.sleep(1800)
 
 
-def run(port: int = 8765, open_browser: bool = True):
+def run(host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True):
     J.reap_orphans()  # 回收上次服务留下的 running 僵尸记录，恢复并发保护
     threading.Thread(target=_monitor_loop, daemon=True).start()
-    srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
-    url = f"http://127.0.0.1:{port}/"
+    srv = ThreadingHTTPServer((host, port), Handler)
+    url = f"http://{host}:{port}/"
     G.info(f"看板已启动：{url}（Ctrl+C 退出）")
     if open_browser:
         threading.Timer(0.6, lambda: webbrowser.open(url)).start()

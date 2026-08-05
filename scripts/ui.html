@@ -11,11 +11,12 @@
   --text:#e9e9ed; --t400:#b2b6ca; --t500:#9397ab; --t600:#75798c; --t700:#595d6c;
   --accent:#9184d9; --a100:#f5f4ff; --a300:#d2cefd; --a400:#b5abfc;
   --a700:#5d5294; --a800:#423a6a; --a900:#2b2741;
+  --danger:#e58a91; --danger-bg:rgba(229,138,145,.10);
   --n800:#3f424d; --n900:#292b31;
   --divider:rgba(233,233,237,0.16); --line:rgba(233,233,237,0.08);
   --r-md:8px; --r-lg:14px;
   --sh-sm:0 0 0 1px #3f424d; --sh-md:0 0 0 1px #595d6c,0 6px 18px rgba(0,0,0,.55);
-  --font:"Inter",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  --font:"Inter",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei","PingFang SC","Microsoft YaHei",sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 var(--font)}
@@ -37,6 +38,8 @@ a{color:var(--accent);text-underline-offset:3px}
 .btn-primary:hover{background:rgba(145,132,217,.12)}
 .btn-secondary{border-color:var(--divider)}
 .btn-secondary:hover{background:rgba(233,233,237,.07)}
+.btn-danger{color:var(--danger);border-color:rgba(229,138,145,.48)}
+.btn-danger:hover{background:var(--danger-bg);border-color:var(--danger)}
 .btn-ghost{color:var(--accent);padding-inline:4px}
 .btn-ghost:hover{background:rgba(145,132,217,.10)}
 .btn-block{width:100%}
@@ -189,16 +192,19 @@ function head(kicker,title,sub){return `<div class="kicker">${esc(kicker)}</div>
   <h3 style="margin-bottom:6px">${title}</h3>
   ${sub?`<p class="soft" style="font-size:14px;max-width:700px;text-wrap:pretty">${sub}</p>`:''}`}
 
-/* ===================== 界面多语言(zh/en/ja) =====================
-   中文是源文案。en/ja 用「整句精确匹配 + 短节点词级替换」在渲染后翻译 DOM,
+/* ===================== 界面多语言(zh/zh-tw/en/ja) =====================
+   简体中文是源文案。繁中使用台湾用语转换；en/ja 用「整句精确匹配 + 短节点词级替换」在渲染后翻译 DOM,
    字典未覆盖的保持中文(优雅降级);项目数据(问题库/工单/阵地文案)跟随数据语言,不翻。*/
+const UI_LANGS=['zh','zh-tw','en','ja'];
 const ULANG=(()=>{
-  const q=new URLSearchParams(location.search).get('lang');
-  if(['zh','en','ja'].indexOf(q)>=0){try{localStorage.setItem('ulang',q)}catch(e){}return q}
-  const s=localStorage.getItem('ulang');if(['zh','en','ja'].indexOf(s)>=0)return s;
+  let q=(new URLSearchParams(location.search).get('lang')||'').toLowerCase();
+  if(['zh-hant','zh-hk','zh-mo'].includes(q))q='zh-tw';
+  if(UI_LANGS.includes(q)){try{localStorage.setItem('ulang',q)}catch(e){}return q}
+  const s=localStorage.getItem('ulang');if(UI_LANGS.includes(s))return s;
   const l=(navigator.language||'').toLowerCase();
+  if(/^zh-(tw|hk|mo|hant)/.test(l))return'zh-tw';
   return l.indexOf('zh')===0?'zh':l.indexOf('ja')===0?'ja':'en'})();
-document.documentElement.lang={zh:'zh-CN',en:'en',ja:'ja'}[ULANG]||'zh-CN';
+document.documentElement.lang={zh:'zh-CN','zh-tw':'zh-TW',en:'en',ja:'ja'}[ULANG]||'zh-CN';
 function setLang(l){localStorage.setItem('ulang',l);location.reload()}
 const UI_D={en:{
 '生成式引擎优化平台':'Generative Engine Optimization','当前品牌':'CURRENT BRAND','切换 ▾':'Switch ▾',
@@ -342,6 +348,7 @@ ja:[['已配置','設定済'],['人工采样','手動'],['未测','未計測'],[
  ['联网','検索'],['参数化知识','パラメトリック'],['自有阵地','自社'],['已铺','配信済'],['适配','適合'],['当前','現在']]};
 UI_D.en['你']='You';UI_D.ja['你']='自社';
 Object.assign(UI_D.en,{
+'关闭服务器':'Stop server',
 'GEO 健康分':'GEO health score','内容承接':'Content readiness','无提示样本中被主动提到':'Mentioned unprompted',
 '来源域名里属于你的比例':'Your share of cited domains','已被 AI 引用的阵地占比':'Channels already cited by AI','目标问题已有成稿内容':'Target questions with final content',
 'GEO 健康分趋势':'GEO health trend','加权：提及率30 引用25 阵地20 内容15 事实10；未测项权重重新归一。':'Weights: mention 30, citation 25, channels 20, content 15, facts 10; unmeasured re-normalized.',
@@ -355,6 +362,7 @@ Object.assign(UI_D.en,{
 'AI 还没有主动提到过你':'AI never mentions you unprompted','AI 开始提到你了，但几乎不引用你':'AI mentions you, but rarely cites you',
 '提及与引用同步在涨':'Mentions and citations both rising'});
 Object.assign(UI_D.ja,{
+'关闭服务器':'サーバーを停止',
 'GEO 健康分':'GEO ヘルススコア','内容承接':'コンテンツ受け皿','无提示样本中被主动提到':'無指名サンプルでの言及',
 '来源域名里属于你的比例':'引用ドメインに占める自社比率','已被 AI 引用的阵地占比':'AI に引用済みのチャネル比率','目标问题已有成稿内容':'完成稿がある対象質問の比率',
 'GEO 健康分趋势':'GEO スコア推移','加权：提及率30 引用25 阵地20 内容15 事实10；未测项权重重新归一。':'重み: 言及30 引用25 チャネル20 コンテンツ15 ファクト10。未計測は再正規化。',
@@ -650,12 +658,46 @@ Object.assign(UI_D.ja,{
 '块，再导入。':'ブロックに貼り付けて再インポート。',
 '本产品不内置定时器。要每周自动跑并发送，用 Claude 的 schedule 能力挂':'タイマーは非内蔵。週次自動実行と送信は Claude の schedule 機能で',
 '，跑完把 deliverables/ 发给收件人。':'を設定し、完了後 deliverables/ を送付。'});
+
+/* 繁體中文（台灣）：先做字形轉換，再套用台灣慣用科技與介面詞彙。
+   字形表只涵蓋本專案會輸出的漢字，避免引入外部 CDN 或執行階段依賴。 */
+const ZHTW_FROM='万与专业东丢两严个临为举么义习书买乱争于亏云产亿仅从仓们价众优会传伤体余侧储儿关兴内册写决况净准减凑几凭击划则刚创删别剥办务动势区协单占却厂历压参双发变叠台号后吗听启员响团园围国图场坏块声壳处备复够头夸宁宝实审对导将尔尸层属币师带帮干并库应开异弃张弹强归当录径忆态总恒悬惩惯愿戏战户托执扩扫扰抢护报担拟拥拦择挂挡挤损换据携撑数斗断无旧时显暂术机杀杂权杠条来极构栅标栏树样档检槛横残气汇汉没浅测浏涨满滤滥灭点状独环现画监盖盘着码础确礼离种积称稳竖竞笔筛签简类纠约级纪纯纲纳线组细织终经绑结给绝统继绪续维综缀编缘网罚联脑脚脱腾节范荐获营蓝虑补装见观规视览触计订认讨让议讯记讲许论设访证评识诉诊词译试诚话询该详语误说请诺读谁调谱负责败账质购贴费资赖赢趋踪车转轮软轻载较辑输边达过运还这进远连迟适选递逻邻采释里鉴钟钥钱钻铺链销锁锋错锚键长门闭问间闻阅阈队阳阵阶际险随隐难静页顶项顺须顾顿预领颈频题额风饰马驱验骗骤齐';
+const ZHTW_TO='萬與專業東丟兩嚴個臨為舉麼義習書買亂爭於虧雲產億僅從倉們價眾優會傳傷體餘側儲兒關興內冊寫決況淨準減湊幾憑擊劃則剛創刪別剝辦務動勢區協單佔卻廠歷壓參雙發變疊臺號後嗎聽啟員響團園圍國圖場壞塊聲殼處備復夠頭誇寧寶實審對導將爾屍層屬幣師帶幫幹並庫應開異棄張彈強歸當錄徑憶態總恆懸懲慣願戲戰戶託執擴掃擾搶護報擔擬擁攔擇掛擋擠損換據攜撐數鬥斷無舊時顯暫術機殺雜權槓條來極構柵標欄樹樣檔檢檻橫殘氣匯漢沒淺測瀏漲滿濾濫滅點狀獨環現畫監蓋盤著碼礎確禮離種積稱穩豎競筆篩籤簡類糾約級紀純綱納線組細織終經綁結給絕統繼緒續維綜綴編緣網罰聯腦腳脫騰節範薦獲營藍慮補裝見觀規視覽觸計訂認討讓議訊記講許論設訪證評識訴診詞譯試誠話詢該詳語誤說請諾讀誰調譜負責敗賬質購貼費資賴贏趨蹤車轉輪軟輕載較輯輸邊達過運還這進遠連遲適選遞邏鄰採釋裡鑑鍾鑰錢鑽鋪鏈銷鎖鋒錯錨鍵長門閉問間聞閱閾隊陽陣階際險隨隱難靜頁頂項順須顧頓預領頸頻題額風飾馬驅驗騙驟齊';
+const ZHTW_TERMS=[
+  ['生成式引擎優化平臺','生成式引擎最佳化平台'],['搜尋引擎優化','搜尋引擎最佳化'],
+  ['接入新品牌','新增品牌'],['接入引導','新增品牌引導'],['國內引擎','中國引擎'],
+  ['國內市場','中國市場'],['人工智能','人工智慧'],['文件夾','資料夾'],
+  ['電子郵件','電子郵件'],['手機號','手機號碼'],['源代碼','原始碼'],
+  ['工作臺','工作台'],['後臺','後台'],['平臺','平台'],['舞臺','舞台'],
+  ['數據','資料'],['信息','資訊'],['信源','資訊來源'],['陣地','通路'],['渠道','通路'],
+  ['設置','設定'],['配置','設定'],['項目','專案'],['保存','儲存'],['文件','檔案'],
+  ['網絡','網路'],['鏈接','連結'],['賬號','帳號'],['用戶','使用者'],['創建','建立'],
+  ['添加','新增'],['加載','載入'],['導入','匯入'],['導出','匯出'],['運行','執行'],
+  ['訪問','存取'],['代碼','程式碼'],['質量','品質'],['視頻','影片'],['反饋','回饋'],
+  ['服務器','伺服器'],['鼠標','滑鼠'],['日誌','紀錄'],['內存','記憶體'],['搜索','搜尋'],
+  ['點擊','點選'],['刷新','重新整理'],['優化','最佳化'],['接口','介面'],['字段','欄位'],
+  ['域名','網域'],['默認','預設'],['當前','目前'],['支持','支援'],['響應','回應'],
+  ['連接','連線'],['進程','程序'],['程序','程式'],['官網','官方網站'],['打印','列印'],
+  ['回歸','迴歸'],['定時器','排程器']
+].sort((a,b)=>b[0].length-a[0].length);
+function toZhTW(text){
+  let v='';for(const c of String(text)){const i=ZHTW_FROM.indexOf(c);v+=i<0?c:ZHTW_TO[i]}
+  for(const[from,to]of ZHTW_TERMS)v=v.split(from).join(to);
+  return v
+}
+const ZHTW_KEYS=new Set([...Object.keys(UI_D.en),...Object.keys(UI_D.ja)]);
+UI_D['zh-tw']=Object.fromEntries([...ZHTW_KEYS].map(key=>[key,toZhTW(key)]));
+const ZHTW_SUBS=new Set([...UI_SUB.en,...UI_SUB.ja].map(([source])=>source));
+UI_SUB['zh-tw']=[...ZHTW_SUBS].map(source=>[source,toZhTW(source)]);
+UI_RX['zh-tw']=[];
 function uiTranslate(root){
   if(ULANG==='zh'||!root)return;
   const d=UI_D[ULANG],subs=UI_SUB[ULANG];
   if(root.nodeType===3){const t=root.nodeValue.trim();if(!t)return;
     if(d[t]!=null){root.nodeValue=root.nodeValue.replace(t,d[t]);return}
     for(const[rx,tpl]of UI_RX[ULANG])if(rx.test(t)){root.nodeValue=root.nodeValue.replace(t,t.replace(rx,tpl));return}
+    if(ULANG==='zh-tw')for(const[rx]of UI_RX.en)if(rx.test(t)){
+      root.nodeValue=root.nodeValue.replace(t,toZhTW(t));return}
     if(t.length<=40){/* 词级替换仅当节点由已知词元+数字/标点组成——避免误伤数据文本 */
       let probe=t;for(const s of subs)probe=probe.split(s[0]).join('');
       if(!/[぀-ヿ一-鿿]/.test(probe)){
@@ -673,6 +715,7 @@ new MutationObserver(ms=>{if(ULANG==='zh')return;
 }).observe(document.body,{childList:true,subtree:true});
 if(ULANG==='en')document.title='GeoLook · Generative Engine Optimization Platform';
 if(ULANG==='ja')document.title='GeoLook · 生成エンジン最適化プラットフォーム';
+if(ULANG==='zh-tw')document.title='GeoLook · 生成式引擎最佳化平台';
 
 /* ===================== 导航 ===================== */
 const NAV=[
@@ -701,7 +744,7 @@ function renderSide(){
     <div style="display:flex;align-items:center;justify-content:space-between">
       <div style="font-weight:500;font-size:17px;letter-spacing:-.01em">Geo<span style="color:var(--accent)">Look</span></div>
       <span style="display:flex;gap:2px">
-        ${[['zh','中'],['en','EN'],['ja','日']].map(([l,t])=>`<button onclick="setLang('${l}')"
+        ${[['zh','简'],['zh-tw','繁'],['en','EN'],['ja','日']].map(([l,t])=>`<button onclick="setLang('${l}')"
           style="background:${ULANG===l?'var(--a900)':'none'};border:0;color:${ULANG===l?'var(--a300)':'var(--t600)'};font-size:10.5px;padding:2px 6px;border-radius:5px;cursor:pointer">${t}</button>`).join('')}
       </span>
     </div>
@@ -720,6 +763,9 @@ function renderSide(){
         <span class="mark"></span><span>${t}</span><span class="bdg">${badge(k)}</span></button>`).join('')}
     </div>`).join('')}
   </nav>
+  <button class="btn btn-danger btn-block" style="font-size:12px;padding:7px 10px" onclick="shutdownServer()">
+    <span aria-hidden="true">⏻</span><span>关闭服务器</span>
+  </button>
   <div style="margin-top:auto;padding:10px;border-radius:var(--r-md);background:var(--surface);font-size:11px;color:var(--t500);line-height:1.55">
     数据更新于 ${esc((D&&D.analytics&&D.analytics.latest_date)||'—')}<br>
     采样为手动触发或由 schedule 驱动
@@ -730,6 +776,21 @@ function renderSide(){
 }
 
 /* ===================== 任务运行 ===================== */
+async function shutdownServer(){
+  const messages={
+    zh:'确定关闭 GeoLook 服务器？关闭后当前页面将无法使用；已启动的后台任务可能继续运行。',
+    'zh-tw':'確定關閉 GeoLook 伺服器？關閉後目前頁面將無法使用；已啟動的背景工作可能繼續執行。',
+    en:'Stop the GeoLook server? This page will become unavailable; background jobs already started may continue.',
+    ja:'GeoLook サーバーを停止しますか？このページは利用できなくなります。開始済みのバックグラウンドジョブは継続する場合があります。'
+  };
+  if(!confirm(messages[ULANG]||messages.zh))return;
+  const r=await post('/api/shutdown',{confirm:true});
+  if(!r.ok){toast(r.error||'关闭失败','err');return}
+  const stopped={zh:'GeoLook 服务器已关闭', 'zh-tw':'GeoLook 伺服器已關閉',
+    en:'GeoLook server stopped',ja:'GeoLook サーバーを停止しました'}[ULANG];
+  document.body.innerHTML=`<main style="min-height:100vh;display:grid;place-items:center;padding:24px">
+    <div class="card elev" style="max-width:460px;text-align:center"><h3>${esc(stopped)}</h3></div></main>`;
+}
 async function runAction(a,params){
   const r=await post('/api/run',{slug:SLUG,action:a,params:params||{}});
   if(!r.ok){toast(r.error||'启动失败','err');return null}
@@ -1467,7 +1528,7 @@ function vPlan(){
       <div>${head('提升 · 行动计划',ts.length+' 项任务，全部来自上面的差距',
         '每条任务都带来源、负责角色和验收方式——标「自动」的做完后由下一次采样与重抓判定是否生效，不需要人工回填。')}</div>
       <div class="row" style="flex:none">
-        ${(D.deliveries||[]).length?`<a class="btn btn-secondary" href="/files/${SLUG}/delivery/${D.deliveries[0]}/03-工单表.csv">导出 CSV</a>`:''}
+        ${(D.deliveries||[]).length?`<a class="btn btn-secondary" href="/files/${SLUG}/delivery/${D.deliveries[0]}/03-工單表.csv">导出 CSV</a>`:''}
         <button class="btn btn-primary" onclick="runAction('verify')">自动验收</button>
       </div>
     </div>
@@ -1770,7 +1831,7 @@ function vReport(){
     {who:'给老板',name:'一页结论',desc:'一句话结论、健康分、五项分项、下一步。打印或存 PDF。',
      act:`<button class="btn btn-primary" style="font-size:12px" onclick="onePager()">生成</button>`},
     {who:'给执行团队',name:'执行方案',desc:'分批排期、按角色拆分、每条的验收标准、可用资产清单。',
-     act:f.indexOf('3-GEO执行方案.html')>=0?`<a class="btn btn-primary" style="font-size:12px" target="_blank" href="/files/${SLUG}/deliverables/${encodeURIComponent('3-GEO执行方案.html')}">打开</a>`
+     act:f.indexOf('3-GEO執行方案.html')>=0?`<a class="btn btn-primary" style="font-size:12px" target="_blank" href="/files/${SLUG}/deliverables/${encodeURIComponent('3-GEO執行方案.html')}">打开</a>`
         :`<button class="btn btn-secondary" style="font-size:12px" onclick="runAction('deliverables')">生成</button>`},
     {who:'给客户',name:'交付包',desc:'诊断报告、优化方案、工单表（CSV）、验收表、资产目录与说明。',
      act:(D.deliveries||[]).length?`<a class="btn btn-primary" style="font-size:12px" target="_blank" href="/files/${SLUG}/delivery/${D.deliveries[0]}/index.html">打开</a>`
@@ -1805,7 +1866,7 @@ function vReport(){
         <div style="font-size:14px;font-weight:500">历史交付包</div>
         <div style="font-size:11.5px;color:var(--t600)">每期打包的客户交付物。</div>
         ${(D.deliveries||[]).map(d=>`<div style="font-size:13px"><a target="_blank" href="/files/${SLUG}/delivery/${d}/index.html">${d}</a>
-          <a class="muted" style="font-size:11.5px;margin-left:8px" href="/files/${SLUG}/delivery/${d}/03-工单表.csv">任务 CSV</a></div>`).join('')||'<span class="muted" style="font-size:12.5px">暂无</span>'}
+          <a class="muted" style="font-size:11.5px;margin-left:8px" href="/files/${SLUG}/delivery/${d}/03-工單表.csv">任务 CSV</a></div>`).join('')||'<span class="muted" style="font-size:12.5px">暂无</span>'}
       </div>
     </div>
     <h4 style="font-size:16px;margin:30px 0 8px">自动交付</h4>
