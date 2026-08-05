@@ -34,33 +34,39 @@ PUBLISHERS = {
         "name": "GitHub 仓库", "market": "general", "env": ["GITHUB_TOKEN"],
         "cfg": [("repo", "owner/repo"), ("branch", "main"), ("dir", "docs/geo")],
         "note": "Contents API 提交 markdown 到你的仓库（配 Pages/静态站即上线）",
+        "guide": {"url": 'https://github.com/settings/tokens', "steps": ['github.com/settings/tokens 生成 Token（Fine-grained 或 classic 勾 repo 权限），只授权目标仓库', 'GITHUB_TOKEN 填生成的 token；repo 填 owner/repo，dir 是仓库内目录', '仓库开 GitHub Pages（Settings→Pages）后，文章提交即上线，URL 记入发布记录']},
     },
     "wordpress": {
         "name": "WordPress", "market": "general", "env": ["WP_USER", "WP_APP_PASSWORD"],
         "cfg": [("site_url", "https://blog.example.com")],
         "note": "REST API 新建草稿文章，登录后台确认后再发布",
+        "guide": {"url": 'https://wordpress.org/documentation/article/application-passwords/', "steps": ['WP 后台 → 用户 → 个人资料 → 底部「应用程序密码」生成一个（需 WP 5.6+）', 'WP_USER 填登录用户名，WP_APP_PASSWORD 填生成的密码（含空格原样填）', 'site_url 填站点根地址；发布后是草稿，登录后台确认再对外']},
     },
     "webhook": {
         "name": "自定义 Webhook", "market": "general", "env": ["PUBLISH_WEBHOOK_URL"],
         "cfg": [],
         "note": "POST JSON {title, markdown, html, slug, path} 到你自己的接收端——没有官方 API 的平台用它桥接",
+        "guide": {"url": '', "steps": ['起一个能收 POST JSON 的 HTTP 端点（自己的服务、n8n、云函数都行）', 'PUBLISH_WEBHOOK_URL 填端点地址；收到 {title, markdown, html, path}', '端点返回 {"url": "..."} 时会记为发布落点链接']},
     },
     "wechat_draft": {
         "name": "公众号草稿箱", "market": "cn", "env": ["WECHAT_APPID", "WECHAT_APPSECRET"],
         "cfg": [("thumb_media_id", "永久素材封面 media_id（草稿必需）")],
         "note": "新建草稿，需在公众号后台预览并群发；服务器 IP 要在白名单",
+        "guide": {"url": 'https://mp.weixin.qq.com', "steps": ['公众号后台 → 设置与开发 → 基本配置：拿 AppID / AppSecret', '同页「IP 白名单」加上本机出口 IP（不加会报 40164）', '素材库上传一张封面图，拿永久素材 media_id 填 thumb_media_id（草稿必需）', '发布后到后台「草稿箱」预览、群发']},
     },
     "x": {
         "name": "X（推文引流）", "market": "global",
         "env": ["X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_SECRET"],
         "cfg": [("link_url", "文章公开链接（留空则自动用该文件最近一次 GitHub/WordPress 发布的 URL）")],
         "note": "API v2 发一条「标题 + 摘要 + 链接」的推文引流，不是发全文；developer.x.com 建应用取四个凭证",
+        "guide": {"url": 'https://developer.x.com/en/portal/dashboard', "steps": ['developer.x.com 申请开发者账号（Free 档即可发推），创建一个 App', 'App 的 User authentication settings 里开启 Read and Write 权限', 'Keys and tokens 页生成四个值：API Key/Secret（Consumer）+ Access Token/Secret', '注意：权限改成 Read/Write 之后要重新生成 Access Token，否则仍是只读', 'link_url 留空时自动用该文件最近一次 GitHub/WordPress 发布的 URL 作回链']},
     },
     "reddit": {
         "name": "Reddit（全文自帖）", "market": "global",
         "env": ["REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET", "REDDIT_USERNAME", "REDDIT_PASSWORD"],
         "cfg": [("subreddit", "发到哪个 subreddit（不带 r/）")],
         "note": "script 应用密码授权，markdown 全文作为 self-post；注意目标社区的自我推广规则",
+        "guide": {"url": 'https://www.reddit.com/prefs/apps', "steps": ['reddit.com/prefs/apps → create app → 类型选「script」', 'REDDIT_CLIENT_ID 是应用名下方那串字符，SECRET 在旁边', '用户名密码就是登录凭证；账号开了两步验证会失败，建议用专用账号', 'subreddit 先用自己的主页社区（u_你的用户名）试发，再进目标社区——先读对方的自我推广规则']},
     },
 }
 

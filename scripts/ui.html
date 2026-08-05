@@ -2119,8 +2119,16 @@ async function vSettings(){
 }
 function editPub(i){
   const x=PUB.publishers[i];
+  const g=x.guide||{};
   modal(`<h4 style="font-size:17px">${esc(x.name)}</h4>
     <p class="muted" style="font-size:12px;margin-top:4px">${esc(x.note)}</p>
+    ${(g.steps||[]).length?`<div style="background:var(--deep);border-radius:var(--r-md);padding:11px 14px;margin-top:10px">
+      <div class="row" style="margin-bottom:5px">
+        <span style="font-size:11px;letter-spacing:.08em;color:var(--t600);flex:1">怎么拿到这些配置</span>
+        ${g.url?`<a href="${esc(g.url)}" target="_blank" style="font-size:11.5px;color:var(--a300)">打开申请页 ↗</a>`:''}</div>
+      ${g.steps.map((s,n)=>`<div style="display:flex;gap:8px;padding:3px 0;font-size:12px;line-height:1.55;color:var(--t400)">
+        <span style="color:var(--a300);flex:none">${n+1}.</span><span>${esc(s)}</span></div>`).join('')}
+    </div>`:''}
     ${x.env.map(e=>`<div class="field"><label>${esc(e)}${x.missing.includes(e)?'':'（已配置，留空保持不变）'}</label>
       <input class="input pub-env" data-env="${esc(e)}" type="password" autocomplete="off" placeholder="${x.missing.includes(e)?'必填':'留空保持不变'}"></div>`).join('')}
     ${x.cfg.map(c=>`<div class="field"><label>${esc(c.key)}</label>
