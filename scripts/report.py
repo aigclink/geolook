@@ -149,6 +149,10 @@ def build_markdown(cfg, audit, metrics, prev_m, prev_a, todos) -> str:
     A(f"| sitemap.xml | {'有（' + str(s.get('sitemap_url_count', 0)) + ' 条 URL）' if s.get('has_sitemap') else '**无**'} |")
     A(f"| llms.txt | {'有' if s.get('has_llms_txt') else '**无**'} |")
     A(f"| robots 封禁 AI 抓取器 | {'、'.join(s.get('ai_bots_blocked') or []) or '无'} |")
+    probe = s.get("ai_ua_probe") or {}
+    if probe or s.get("ai_ua_blocked"):
+        bad = s.get("ai_ua_blocked") or []
+        A(f"| WAF/UA 差异探测 | {'**拒绝 ' + '、'.join(bad) + '**' if bad else f'实测放行 {len(probe)} 个 AI 爬虫 UA'} |")
     A(f"| 页面可访问率 | {s.get('pages_ok', 0)}/{s.get('pages_crawled', 0)} |")
     lc = audit.get("language_coverage") or {}
     if lc:

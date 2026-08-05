@@ -413,7 +413,43 @@ def lint_all(slug: str) -> dict:
 
 # ---------------------------------------------------------------- 主流程
 
-ASSETS = ["llms", "jsonld", "snippets", "outlines"]
+# AI 引擎来源域名（references/attribution.md 的代码实现）。
+# 「常见」清单——各家 referrer 策略会变，产出的资产里都带「先核对自己日志」的说明。
+AI_REFERRERS = {
+    "cn": ["doubao.com", "kimi.moonshot.cn", "kimi.com", "chat.deepseek.com", "chatglm.cn",
+           "yuanbao.tencent.com", "tongyi.aliyun.com", "tongyi.com", "yiyan.baidu.com",
+           "metaso.cn", "n.cn", "quark.cn"],
+    "global": ["chatgpt.com", "chat.openai.com", "perplexity.ai", "gemini.google.com",
+               "copilot.microsoft.com", "claude.ai", "grok.com"],
+}
+
+
+def gen_attribution(slug: str) -> dict[str, str]:
+    """AI 流量归因配置包：GA4 渠道组正则 + 日志分析命令 + 接入说明。"""
+    cfg = G.load_config(slug)
+    market = cfg.get("market", "cn")
+    doms = (AI_REFERRERS["cn"] if market == "cn"
+            else AI_REFERRERS["global"] if market == "global"
+            else AI_REFERRERS["cn"] + AI_REFERRERS["global"])
+    rx = "|".join(d.replace(".", r"\.") for d in doms)
+    ga4 = (f"AI 来源渠道组（GA4 · 来源 匹配正则）\n\n{rx}\n\n"
+           "配置路径：管理 → 数据显示 → 渠道组 → 新建渠道「AI 引擎」，条件：来源 与正则匹配。\n"
+           "注意：测到的是下界（App 内打开常不带 referrer），报告口径写「可归因的 AI 会话 ≥ N」。\n")
+    log_cmd = ("#!/bin/sh\n# AI 来源会话 / AI 爬虫抓取量（在服务器上对 access.log 运行）\n"
+               f"echo 'AI 来源会话：'; grep -icE '{rx}' access.log\n"
+               "echo 'AI 爬虫抓取：'; grep -icE 'GPTBot|OAI-SearchBot|ClaudeBot|PerplexityBot|Bytespider' access.log\n"
+               "# 抓取变多通常先于引用变多，是前置信号；两条命令都可加日期过滤按周对比\n")
+    readme = ("# AI 流量归因接入说明\n\n"
+              "1. `ga4-channel.txt`：GA4 建「AI 引擎」渠道组的匹配正则\n"
+              "2. `log-count.sh`：服务器日志统计 AI 来源会话与 AI 爬虫抓取量\n"
+              "3. 转化事件（注册/留资/下单）里保存来源快照：点击 ID > UTM > referrer > 直接/未知\n\n"
+              "纪律（详见 references/attribution.md）：referrer 清单是「常见」口径，"
+              "先在自己日志里核对；测到的 AI 流量是下界，不外推；"
+              "公开内容不堆 UTM（带参 URL 会稀释规范 URL 的引用份额）。\n")
+    return {"ga4-channel.txt": ga4, "log-count.sh": log_cmd, "README.md": readme}
+
+
+ASSETS = ["llms", "jsonld", "snippets", "outlines", "attribution"]
 
 
 def run(slug: str, which: list[str] | None = None, with_draft: bool = False,
@@ -447,6 +483,13 @@ def run(slug: str, which: list[str] | None = None, with_draft: bool = False,
             (d / f"definition.{lang}.html").write_text(gen_definition_block(slug, lang), "utf-8")
             (d / f"faq.{lang}.html").write_text(gen_faq_block(slug, lang), "utf-8")
             made += [f"assets/snippets/definition.{lang}.html", f"assets/snippets/faq.{lang}.html"]
+
+    if "attribution" in which:
+        d = adir / "attribution"
+        d.mkdir(parents=True, exist_ok=True)
+        for name, body in gen_attribution(slug).items():
+            (d / name).write_text(body, "utf-8")
+            made.append(f"assets/attribution/{name}")
 
     outlines = []
     if "outlines" in which:

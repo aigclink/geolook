@@ -21,6 +21,7 @@ import tasks as T
 
 STATUS_CN = {"todo": "待开始", "doing": "进行中", "done": "已完成",
              "blocked": "受阻", "wontfix": "不做"}
+_RISK_ORDER = {"low": 0, "watch": 1, "high": 2}  # 同优先级内先排低风险：先做安全的建立信任
 
 
 def _load(slug: str):
@@ -76,10 +77,14 @@ def optimization_plan(slug: str) -> str:
     gate = []
     if site.get("ai_bots_blocked"):
         gate.append("robots 封禁了 AI 抓取器")
+    if site.get("ai_ua_blocked"):
+        gate.append(f"WAF/CDN 对 {'、'.join(site['ai_ua_blocked'])} 的 UA 拒绝访问（浏览器里看不出来）")
     if not site.get("has_sitemap"):
         gate.append("无 sitemap")
     if not site.get("has_llms_txt"):
         gate.append("无 llms.txt")
+    elif (site.get("llms_txt_check") or {}).get("broken"):
+        gate.append("llms.txt 里有失效链接")
     spa = sum(1 for p in audit.get("pages", [])
               if "SPA_SHELL" in p.get("issue_codes", [])
               or (p.get("issue_codes") is None and p.get("word_count", 0) < 120))
@@ -201,16 +206,44 @@ def execution_plan(slug: str) -> str:
             continue
         done = sum(1 for t in batch if t["status"] == "done")
         L += [f"### {label}（{done}/{len(batch)} 完成）", "",
-              "| 编号 | 任务 | 工作包 | 负责 | 工作量 | 验收标准 | 状态 |",
-              "|---|---|---|---|---|---|---|"]
-        for t in sorted(batch, key=lambda x: x["priority"]):
+              "| 编号 | 任务 | 工作包 | 负责 | 工作量 | 风险 | 验收标准 | 状态 |",
+              "|---|---|---|---|---|---|---|---|"]
+        for t in sorted(batch, key=lambda x: (x["priority"], _RISK_ORDER.get(x.get("risk", "watch"), 1))):
             L.append(f"| {t['id']} | {R.cell(t['title'])} | {t['package']} | {t['owner']} "
                      f"| {T.EFFORT.get(t['effort'], t['effort'])} "
+                     f"| {T.RISK_LABEL.get(t.get('risk', ''), '—')[:2]} "
                      f"| {R.cell(t['acceptance'].get('desc',''))} "
                      f"| {STATUS_CN.get(t['status'], t['status'])} |")
         L.append("")
 
-    L += ["## 二、按负责角色拆分", "",
+    L += ["## 二、风险分级与执行纪律", "",
+          "优先级说「多重要」，风险说「动手时多小心」，两者独立——"
+          "解封 robots 是 P0 也是高风险，改错一行会封掉全站。", ""]
+    for rk in ("low", "watch", "high"):
+        ts = [t for t in rows if t.get("risk", "watch") == rk]
+        if not ts:
+            continue
+        note = {"low": "纯新增资产或站外动作，不改已有页面，随时可撤——**先做这批建立信任**",
+                "watch": "改已有页面内容或新建内容。**不改 URL、不改已有排名页的核心主题**；"
+                         "发布后 7 / 14 / 28 天各复核一次收录与引用变化",
+                "high": "动 robots / WAF / noindex / 渲染架构。**修改前备份、单独排期、"
+                        "小批量发布、准备回滚方案**；发布后立刻重跑体检确认无回归"}[rk]
+        L += [f"### {T.RISK_LABEL[rk]}（{len(ts)} 条）", "", note, "",
+              "、".join(f"`{t['id']}`" for t in ts), ""]
+    L += ["通用纪律：先保护已有 URL、canonical、标题和历史权重，再考虑新增；"
+          "禁止一次性批量修改大量已收录页面；数据没有改善时先分析原因，不盲目继续改。", ""]
+
+    L += ["## 三、四层责任矩阵", "",
+          "GEO 会惩罚部门墙：任何一层没人认领，整条链路都白做。每层的第一责任人：", "",
+          "| 层 | 回答的问题 | 第一责任人 | 典型工作 |", "|---|---|---|---|",
+          "| 访问 | 抓取器能拿到内容吗 | 开发 | robots / WAF 白名单 / SSR / noindex |",
+          "| 定向 | 找得到、认得清每个 URL 吗 | 开发 | sitemap / canonical / hreflang / llms.txt |",
+          "| 理解 | 机器读得懂这是什么实体吗 | 开发 + 内容 | JSON-LD / 定义句逐字一致 / 消歧 |",
+          "| 可引用 | 有值得引用的具体内容吗 | 内容 | 抽取块 / 1000+ 词证据页 / 对题标题 |",
+          "| 实体权威 | 站外有没有独立佐证 | 市场 | 百科 / 榜单站 / 内容平台 / 权威引用 |", "",
+          "> 定位与定价口径、公开承诺由创始人/产品负责人拍板——写进品牌事实卡后各层引用，不各说各话。", ""]
+
+    L += ["## 四、按负责角色拆分", "",
           "把这一节直接发给对应的人，不需要读全文。", ""]
     by_owner: dict[str, list] = {}
     for t in rows:
@@ -232,7 +265,7 @@ def execution_plan(slug: str) -> str:
 
     adir = G.project_dir(slug) / "assets"
     if adir.exists():
-        L += ["## 三、可直接使用的资产", "",
+        L += ["## 五、可直接使用的资产", "",
               "以下文件已生成好，开发和内容团队可以直接取用：", "",
               "| 文件 | 用途 | 谁用 |", "|---|---|---|"]
         m = [("llms.txt", "官方事实索引，传到网站根目录", "开发"),
@@ -242,6 +275,8 @@ def execution_plan(slug: str) -> str:
              ("snippets/faq.*.html", "FAQ 块，答案必须在静态 HTML 里可见", "开发"),
              ("outlines/*.md", "每个目标问题一份内容大纲", "内容"),
              ("drafts/*.md", "AI 初稿，**必须过风险检查并人工核实后才能发布**", "内容"),
+             ("attribution/ga4-channel.txt", "GA4「AI 引擎」渠道组匹配正则", "开发"),
+             ("attribution/log-count.sh", "服务器日志统计 AI 来源会话与爬虫抓取", "开发"),
              ("DEPLOY.md", "部署清单，含每步验收标准", "开发")]
         for f, use, who in m:
             exists = any(adir.glob(f)) if "*" in f else (adir / f).exists()
@@ -249,11 +284,13 @@ def execution_plan(slug: str) -> str:
                 L.append(f"| `{f}` | {use} | {who} |")
         L.append("")
 
-    L += ["## 四、验收与复跑机制", "",
+    L += ["## 六、验收与复跑机制", "",
           "1. 团队按工单执行，完成后在工作台标记或直接部署",
           "2. 每期重跑体检与采样，系统**自动判定**哪些工单真的闭环",
           "3. 无法程序判定的（如百科词条是否过审）标「待人工」，确认后手动标记",
-          "4. 出现回归（之前达标现在不达标）会自动打回，不会被忽略", "",
+          "4. 出现回归（之前达标现在不达标）会自动打回，不会被忽略",
+          "5. 内容调整发布后按 **7 / 14 / 28 天**各复核一次；数据没有改善先分析原因，"
+          "不要盲目继续批量改动", "",
           "建议节奏：**页面体检每周，AI 答案采样每两周或每月**。",
           "采样有成本且指标本身有噪声，跑太密看不出信号，跑太疏发现问题太晚。", ""]
     return "\n".join(L)

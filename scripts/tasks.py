@@ -21,6 +21,29 @@ PACKAGES = ["实体消歧", "页面技术", "内容矩阵", "标题体系", "知
 OWNERS = ["开发", "内容", "市场", "GEO顾问", "法务", "设计"]
 EFFORT = {"S": "≤0.5 人日", "M": "1–3 人日", "L": "≥5 人日"}
 
+# 风险分级：优先级说「多重要」，风险说「动手时多小心」。二者独立——
+# 解封 robots 是 P0 也是高风险（改错一行封掉全站）。执行顺序按「先低风险，
+# 高风险单独排期并留回滚」，见 method.md 保护性纪律。
+RISK_LABEL = {"low": "低风险快速优化", "watch": "需观察的内容调整", "high": "高风险技术改造"}
+# 动 robots / WAF / noindex / 渲染架构：错一处影响全站抓取，必须小批量+可回滚
+_HIGH_CHECKS = {"site.no_ai_bot_block", "site.no_ai_ua_block", "pages.static_text", "pages.no_noindex"}
+# 纯新增资产，不改已有页面的 URL/标题/正文，随时可撤
+_LOW_CHECKS = {"site.has_sitemap", "site.robots_sitemap_declared", "site.has_llms_txt",
+               "site.llms_txt_valid", "pages.has_jsonld"}
+
+
+def risk_of(t: dict) -> str:
+    check = (t.get("acceptance") or {}).get("check") or ""
+    if check in _HIGH_CHECKS or "部分路径封禁" in t.get("title", ""):
+        return "high"
+    if check in _LOW_CHECKS:
+        return "low"
+    # 站外动作（词条/榜单/平台运营）与内部知识库不动自己站点，无既有权重风险
+    if t.get("package") in ("外部证据", "知识库"):
+        return "low"
+    # 其余是改已有页面内容或新建内容：发布后按 7/14/28 天观察窗看数据
+    return "watch"
+
 
 def _t(tid, priority, package, title, why, action, owner, effort, acceptance,
        market="both", affected=None, window="30天", assets=None):
@@ -59,20 +82,76 @@ def from_audit(audit: dict, cfg: dict, seq) -> list[dict]:
                       "移除对应 Disallow，或改为仅屏蔽后台路径", "开发", "S",
                       {"type": "auto", "check": "site.no_ai_bot_block",
                        "desc": "重抓后 robots 不再整站封禁任何 AI 抓取器"}))
+    if site.get("ai_ua_blocked"):
+        out.append(_t(next(seq), "P0", "页面技术",
+                      "解除 WAF/CDN 对 AI 爬虫的差异封锁",
+                      f"普通浏览器 200，但换 {'、'.join(site['ai_ua_blocked'])} 的 UA 抓首页被拒——"
+                      "robots 放行没用，引擎侧等于不存在，且站长在浏览器里看不出来",
+                      "到 CDN/防火墙（Cloudflare Bot Fight、阿里云 WAF 等）给这些爬虫 UA 加白名单，"
+                      "不要用「拦所有 bot」的一刀切规则", "开发", "S",
+                      {"type": "auto", "check": "site.no_ai_ua_block",
+                       "desc": "重抓时用 AI 爬虫 UA 探测首页不再被拒"}))
+    for p in site.get("ai_bots_partial", []) or []:
+        out.append(_t(next(seq), "P1", "页面技术",
+                      f"核对 robots 对 {p['bot']} 的部分路径封禁",
+                      f"{p['count']}/{p['sampled']} 个抽样内容页命中 {p.get('rule') or '封禁规则'}"
+                      f"（如 {p['paths'][0]}）。封搜索结果页/带参数页是对的，封内容页是自伤",
+                      "逐条核对命中的 Disallow：确认只封低价值路径（站内搜索、会话参数、结账页），"
+                      "内容页被误伤的改规则放行", "开发", "S",
+                      {"type": "manual",
+                       "desc": "封禁是刻意为之（低价值页）而非误伤内容页，需人工确认"}))
     if not site.get("has_sitemap"):
         out.append(_t(next(seq), "P0", "页面技术", "补 sitemap.xml 并提交各搜索引擎",
                       "无 sitemap，收录效率和覆盖面打折（method.md 可抓取性）",
                       "生成 sitemap.xml，robots.txt 里声明，提交百度/必应/Google/夸克",
                       "开发", "S",
                       {"type": "auto", "check": "site.has_sitemap", "desc": "重抓能取到 sitemap.xml"}))
+    elif site.get("robots_sitemap_declared") is False:
+        out.append(_t(next(seq), "P2", "页面技术", "robots.txt 里声明 Sitemap: 行",
+                      "sitemap 存在但 robots 没声明，AI 抓取器发现新页面更慢",
+                      "在 robots.txt 末尾加一行 `Sitemap: <完整 URL>`", "开发", "S",
+                      {"type": "auto", "check": "site.robots_sitemap_declared",
+                       "desc": "robots.txt 含 Sitemap: 声明"}))
     if not site.get("has_llms_txt"):
         out.append(_t(next(seq), "P1", "知识库", "上线 /llms.txt 官方事实索引",
                       "低成本给 AI 一份人工整理的官方索引，国内很多站没做（content-patterns.md 第 7 节）",
                       "用 `geo.py generate --asset llms` 产出后部署到网站根目录", "开发", "S",
                       {"type": "auto", "check": "site.has_llms_txt", "desc": "重抓能取到 /llms.txt"}))
+    else:
+        lch = site.get("llms_txt_check") or {}
+        if lch.get("broken") or lch.get("robots_blocked"):
+            bads = [b["url"] for b in lch.get("broken", [])] + \
+                   [b["url"] for b in lch.get("robots_blocked", [])]
+            out.append(_t(next(seq), "P1", "知识库", "修复 llms.txt 里的失效/被封链接",
+                          "llms.txt 只有指向可抓取的有效页面才有意义；指向 404 或被 robots 封禁的页面"
+                          "等于递给 AI 一份坏地图",
+                          "逐条修复：失效链接改成有效 URL 或删掉；被 robots 封禁的路径解除封禁或换页面",
+                          "开发", "S",
+                          {"type": "auto", "check": "site.llms_txt_valid",
+                           "desc": "llms.txt 抽样链接全部 200 且未被 robots 封禁"},
+                          affected=bads[:10]))
+
+    if site.get("sitemap_noisy_urls"):
+        out.append(_t(next(seq), "P2", "页面技术", "清理 sitemap 里的低价值 URL",
+                      f"sitemap 含 {site['sitemap_noisy_urls']} 条带参数/搜索/翻页 URL"
+                      f"（如 {site.get('sitemap_noisy_example')}），会把低质片段灌进检索索引、"
+                      "稀释实体表征（method.md 可抓取性）",
+                      "sitemap 只保留值得被引用的规范页；低价值路径用 robots 通配符挡掉"
+                      "（`Disallow: /*?session=`、`Disallow: /search?`）", "开发", "S",
+                      {"type": "auto", "check": "site.sitemap_clean",
+                       "desc": "sitemap 里不再有带参数/搜索/翻页 URL"}))
 
     # 语言覆盖（双市场必查）
     lc = audit.get("language_coverage") or {}
+    if lc.get("multilingual") and lc.get("content_pages") \
+            and lc.get("hreflang_pages", 0) / lc["content_pages"] < 0.3:
+        out.append(_t(next(seq), "P1", "页面技术", "多语言页面补 hreflang 声明",
+                      f"多语言站但只有 {lc.get('hreflang_pages', 0)}/{lc['content_pages']} 个内容页"
+                      "声明 hreflang，引擎会把各语言版本当重复内容，跨市场检索时挂错语言页面",
+                      "每个多语言页面加全套 `<link rel=\"alternate\" hreflang>` 互指（含 x-default），"
+                      "与 canonical 保持一致", "开发", "M",
+                      {"type": "auto", "check": "site.hreflang_gte:0.5",
+                       "desc": "内容页 hreflang 覆盖率 ≥ 50%"}))
     if market in ("global", "both") and lc.get("en_pages", 0) == 0:
         out.append(_t(next(seq), "P0", "内容矩阵", "建英文原生内容区",
                       "海外 AI 引用的可识别语言里英文占 82.90%–95.07%，机翻页进不了候选池（global-platforms.md）",
@@ -99,6 +178,20 @@ def from_audit(audit: dict, cfg: dict, seq) -> list[dict]:
                              "desc": "受影响页面重抓后正文词数 ≥ 120"},
                affected=spa)
         t["baseline_count"] = len(spa)
+        out.append(t)
+
+    noidx = [p["url"] for p in pages
+             if _has_issue(p, "NOINDEX", "noindex") or _has_issue(p, "XROBOTS_NOINDEX", "X-Robots-Tag")]
+    if noidx:
+        t = _t(next(seq), "P0", "页面技术", "移除内容页上的 noindex（meta / X-Robots-Tag）",
+               "带 noindex 的页面等于主动退出候选池；X-Robots-Tag 是响应头，源码里看不到，"
+               "常常是 CDN 或中间件配置带病上线",
+               "逐页确认 noindex 是否刻意；不是的话删掉 meta robots noindex，"
+               "并检查 CDN/网关有没有全局注入 X-Robots-Tag 头",
+               "开发", "S", {"type": "auto", "check": "pages.no_noindex",
+                             "desc": "受影响页面重抓后不再带 noindex"},
+               affected=noidx)
+        t["baseline_count"] = len(noidx)
         out.append(t)
 
     no_schema = [p["url"] for p in pages if not p.get("jsonld_types")]
@@ -242,6 +335,12 @@ def entity_tasks(cfg: dict, seq) -> list[dict]:
            "百科是品牌实体消歧的地基；baidu.com 同时是百度AI 37.7%、文心 29.0% 的引用来源",
            "提交百度百科；海外市场同步争取 Wikipedia（需第三方来源支撑）", "市场", "M",
            {"type": "manual", "desc": "词条通过审核并上线"}),
+        _t(next(seq), "P1", "监测闭环", "接入 AI 流量归因（渠道组 + 日志 + 来源快照）",
+           "只测「被引用」不测「带来转化」，监测就是汇报表演；AI 来源会话是可见性投入的业务对账单"
+           "（references/attribution.md）",
+           "用 `geo.py generate --asset attribution` 产出配置包：GA4 建「AI 引擎」渠道组、"
+           "服务器日志跑统计脚本、转化事件保存来源快照。报告口径写「可归因 ≥ N」，不外推",
+           "开发", "S", {"type": "manual", "desc": "渠道组已建、日志脚本可跑、转化事件带来源快照（人工确认）"}),
     ]
 
 
@@ -276,6 +375,7 @@ def build(slug: str) -> dict:
     win = {"P0": "30天", "P1": "60天", "P2": "90天"}
     for t in tasks:
         t["window"] = win.get(t["priority"], "90天")
+        t["risk"] = risk_of(t)
 
     # 保留已有工单的状态与证据（重跑 plan 不该清空进度）
     old = {t["id"]: t for t in (G.read_json(pdir / "tasks.json", {}) or {}).get("tasks", [])}

@@ -30,9 +30,9 @@ except ModuleNotFoundError as e:
 
 DEFAULT_PLATFORMS = {
     "cn": ["glm", "doubao", "deepseek", "kimi", "minimax", "nano_ai", "baidu"],
-    "global": ["gemini", "openai", "claude", "grok", "perplexity", "chatgpt"],
+    "global": ["gemini", "openai", "claude", "grok", "perplexity", "chatgpt", "google_aio"],
     "both": ["glm", "doubao", "deepseek", "kimi", "minimax", "nano_ai", "baidu",
-             "gemini", "openai", "claude", "grok", "perplexity", "chatgpt"],
+             "gemini", "openai", "claude", "grok", "perplexity", "chatgpt", "google_aio"],
 }
 
 
@@ -233,7 +233,7 @@ def cmd_sample(a):
 def cmd_sheet(a):
     import sample
 
-    sample.sheet(a.slug)
+    sample.sheet(a.slug, intent=a.intent, limit=a.limit)
 
 
 def cmd_import(a):
@@ -502,6 +502,9 @@ def main():
 
     s = sub.add_parser("sample-sheet", help="导出人工/浏览器采样表")
     s.add_argument("--slug", required=True)
+    s.add_argument("--intent", choices=["buyer"], default=None,
+                   help="buyer = 只出买家意图题（价格/推荐/比较/替代），适合每周轻量核查")
+    s.add_argument("--limit", type=int, default=None, help="每平台最多题数（周检建议 15–20）")
     s.set_defaults(func=cmd_sheet)
 
     s = sub.add_parser("sample-import", help="导入人工采样表")
@@ -535,7 +538,7 @@ def main():
 
     s = sub.add_parser("generate", help="产出可直接部署的资产（llms.txt/JSON-LD/片段/大纲）")
     s.add_argument("--slug", required=True)
-    s.add_argument("--asset", help="逗号分隔：llms,jsonld,snippets,outlines")
+    s.add_argument("--asset", help="逗号分隔：llms,jsonld,snippets,outlines,attribution")
     s.add_argument("--draft", action="store_true", help="额外调用 LLM 出文章初稿")
     s.add_argument("--draft-limit", type=int, default=3, dest="draft_limit")
     s.set_defaults(func=cmd_generate)

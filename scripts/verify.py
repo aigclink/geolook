@@ -5,6 +5,11 @@ verify 不改内容，只做三件事：重抓 → 跑 checker → 回写 tasks.
 
 checker 语法（写在工单的 acceptance.check 里）：
   site.no_ai_bot_block            robots 不再整站封 AI 抓取器
+  site.no_ai_ua_block             换 AI 爬虫 UA 探测首页不再被 WAF/CDN 拒绝
+  site.robots_sitemap_declared    robots.txt 已声明 Sitemap: 行
+  site.llms_txt_valid             llms.txt 抽样链接全部有效且未被 robots 封禁
+  site.sitemap_clean              sitemap 不再含带参数/搜索/翻页 URL
+  site.hreflang_gte:0.5           多语言内容页 hreflang 覆盖率达标
   site.has_sitemap / has_llms_txt 站点级资产已上线
   site.avg_score_gte:70           重跑 audit 均分达标
   site.en_pages_gte:8             英文有效内容页数达标
@@ -84,6 +89,48 @@ def check(task: dict, audit: dict, metrics: dict) -> tuple[bool | None, str, dic
             blocked = site.get("ai_bots_blocked") or []
             return (not blocked), ("robots 未封禁任何 AI 抓取器" if not blocked
                                    else f"仍封禁：{'、'.join(blocked)}"), None
+        if expr == "site.no_ai_ua_block":
+            bad = site.get("ai_ua_blocked") or []
+            probe = site.get("ai_ua_probe") or {}
+            if not probe and not bad:
+                return None, "本次重抓没有 UA 探测数据（旧版抓取结果），先重跑 crawl", None
+            return (not bad), ("AI 爬虫 UA 探测首页全部放行" if not bad
+                               else f"仍被拒：{'、'.join(bad)}"), None
+        if expr == "site.robots_sitemap_declared":
+            ok = bool(site.get("robots_sitemap_declared"))
+            return ok, ("robots.txt 已声明 Sitemap" if ok else "robots.txt 仍未声明 Sitemap"), None
+        if expr == "site.llms_txt_valid":
+            if not site.get("has_llms_txt"):
+                return False, "llms.txt 缺失", None
+            lch = site.get("llms_txt_check") or {}
+            if not lch:
+                return None, "本次重抓没有 llms.txt 校验数据（旧版抓取结果），先重跑 crawl", None
+            nbad = len(lch.get("broken", [])) + len(lch.get("robots_blocked", []))
+            return nbad == 0, (f"抽样 {lch.get('checked', 0)} 条链接全部有效" if nbad == 0
+                              else f"仍有 {nbad} 条失效/被封链接"), \
+                {"label": "llms.txt 失效链接", "cur": nbad, "target": 0, "op": "lte"}
+        if expr == "pages.no_noindex":
+            bad = [u for u in aff if any(
+                c in (pages.get(u, {}).get("issue_codes") or [])
+                for c in ("NOINDEX", "XROBOTS_NOINDEX"))]
+            return (not bad), f"{base - len(bad)}/{base} 页已去掉 noindex", \
+                {"label": "仍带 noindex 的页面", "cur": len(bad), "target": 0, "op": "lte", "base": base}
+        if expr == "site.sitemap_clean":
+            n = site.get("sitemap_noisy_urls")
+            if n is None:
+                return None, "本次重抓没有 sitemap 污染统计（旧版抓取结果），先重跑 crawl", None
+            return n == 0, (f"sitemap 已无低价值 URL" if n == 0
+                            else f"仍有 {n} 条带参数/搜索/翻页 URL"), \
+                {"label": "sitemap 低价值 URL", "cur": n, "target": 0, "op": "lte"}
+        if expr.startswith("site.hreflang_gte:"):
+            tgt = float(expr.split(":")[1])
+            lc2 = audit.get("language_coverage") or {}
+            total = lc2.get("content_pages") or 0
+            if not total or "hreflang_pages" not in lc2:
+                return None, "本次体检没有 hreflang 统计（旧版结果），先重跑 crawl + audit", None
+            cur = lc2.get("hreflang_pages", 0) / total
+            return cur >= tgt, f"hreflang 覆盖 {lc2.get('hreflang_pages', 0)}/{total} 页（{cur:.0%} / 目标 {tgt:.0%}）", \
+                {"label": "hreflang 覆盖率", "cur": round(cur, 2), "target": tgt, "op": "gte", "pct": True}
         if expr == "site.has_sitemap":
             ok = bool(site.get("has_sitemap"))
             return ok, f"sitemap {'已上线（%d 条 URL）' % site.get('sitemap_url_count', 0) if ok else '仍缺失'}", None
