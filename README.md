@@ -36,24 +36,26 @@ More and more users ask AI directly — "best tools for X", "X vs Y, which one".
 
 Four stages plus operations, all in one self-hosted dashboard:
 
-**Status** — Engine performance across 15 engines (10 automated via API + 5 manual sheets): mention rate, rank, citation share, what each engine actually cites, **sample replay** of raw answers, suspected-negative flags; **brand mention distribution** (you vs. competitors, per engine and aggregated); competitor tables with each rival's strongest engine one click away; a 7-category question bank where every question gets a **diagnosis type** (suspected-negative > competitor-dominated > absent > low-ranked).
+**Status** — Engine performance across 17 engines (10 automated via API + 7 manual, incl. Google AI Overviews and Metaso): mention rate, rank, citation share, what each engine actually cites, **sample replay** of raw answers, suspected-negative flags; **brand mention distribution** (you vs. competitors, per engine and aggregated); competitor tables with each rival's strongest engine one click away — plus each rival's **citation-source mix** and a "channels they have that you don't" hit-list; a 7-category question bank with **intent-group cards** (buyer / educate / probe — see at a glance which intent class you're absent from) where every question gets a **diagnosis type** (suspected-negative > competitor-dominated > absent > low-ranked); a **sample library** where every AI answer's metadata is browsable and human-correctable (regex parsing misreads — name collisions, negation — get fixed here; corrections recompute metrics instantly and survive re-sampling), with per-sample **citation-source breakdown** (domain × count · share) and sampling-environment provenance (sandbox / incognito / dedicated profile / personal — personal auto-downgrades to "needs review").
 
 **Keyword mining** — expand the question bank from real search demand: Baidu suggest (CN) + Google autocomplete (Global) terms from brand/competitor/category roots (free public endpoints, no keys). Each round is snapshot-diffed to flag **rising demand** (affects topic ordering, never metrics); alternative/vs phrasings mined from competitor roots feed the Competitors page. Candidates only — adding to the bank is always a manual check.
 
 ![Engines](docs/screenshots-en/engines.png)
 
-**Diagnosis** — Site audit (robots / sitemap / llms.txt / accessibility / language coverage / extraction blocks, with click-through filtering straight to the fixing ticket); gap diagnosis (content → channels → facts); a **channel map of 19 channels** weighted by real citation-corpus data, each specifying what to build, how much, at what cadence, by whom; a **brand facts library** as the single source of truth that llms.txt, JSON-LD and content drafts are generated from.
+**Diagnosis** — Site audit organized as a **four-layer dependency chain** (Access → Orientation → Understanding → Quotability: each layer depends on the one above, and a failing Access layer makes everything downstream invisible to engines — the fix order is computed for you). The Access layer goes well beyond robots checks: RFC 9309-compliant robots parsing (catches wildcard-group blocks, shared UA groups and specificity overrides that line-by-line regexes miss), **WAF/CDN differential probing with real AI-crawler UAs** (robots may allow GPTBot while your CDN 403s it — invisible from a browser), X-Robots-Tag header noindex, llms.txt link validation, hreflang coverage, sitemap index-pollution and duplicate title/content detection. **Passage-level quotability**: retrieval picks passages, not pages — pages with sections but zero independently quotable passages get flagged with a concrete fix. Plus gap diagnosis (content → channels → facts); a **channel map of 19 channels** weighted by real citation-corpus data; and a **brand facts library** as the single source of truth that llms.txt, JSON-LD and content drafts are generated from.
 
 ![Channel map](docs/screenshots-en/channels.png)
 
-**Action** — Structured tickets (rationale / owner / effort / window / acceptance criteria) with "first-measured → current → target" progress bars and automatic reopening on regressions; a **content workbench** (topic pool sorted by "not mentioned + no content", required extraction blocks and brand facts at hand, live citability pre-check, fabrication-risk lint for AI drafts, and a **distribution checklist** matching each piece to its target channels); **deploy assets** (llms.txt, JSON-LD, HTML snippets, each labeled with its destination, plus a DEPLOY.md runbook); **publishing** to GitHub / WordPress drafts / WeChat OA drafts / webhook — always manually confirmed.
+**Action** — Structured tickets (rationale / owner / effort / window / acceptance criteria) carrying an independent **risk grade** (low-risk quick wins / observe with 7-14-28-day recheck / high-risk technical changes with backup & rollback discipline — priority says how important, risk says how careful), with "first-measured → current → target" progress bars and automatic reopening on regressions; tickets deep-link to the exact question they most need written; a **content workbench** (topic pool sorted by "not mentioned + no content", required extraction blocks and brand facts at hand, live citability pre-check, fabrication-risk lint for AI drafts, and a **distribution checklist** matching each piece to its target channels); **deploy assets** (llms.txt, JSON-LD, HTML snippets, plus an **AI-traffic attribution pack**: GA4 "AI engines" channel-group regex, server-log counting script, source-snapshot guidance — closing the loop from "cited" to "converts"); **publishing** with channels grouped General / China / Global — GitHub, WordPress drafts, WeChat OA drafts, webhook, plus real **X** (teaser tweet with auto-backlink to your latest long-form publish) and **Reddit** (full-markdown self-post) integrations, each with an in-dialog step-by-step credential guide; multi-channel checkbox publishing per article, and publish status synced back to the action plan, pending list and question bank. Platforms without a personally usable official API (Weibo, Xiaohongshu, Toutiao, Bilibili, LinkedIn, Facebook, Instagram) are deliberately **not** integrated — better absent than fake; the page says why and offers the webhook bridge instead. Publishing is always manually confirmed, article by article.
 
 ![Action plan](docs/screenshots-en/plan.png)
 ![Workbench](docs/screenshots-en/workbench.png)
 
 **Results** — Per-question before/after (all / CN / global tabs), task-level before/after, verification history; boss-ready one-pager, execution plan, and a complete client delivery package (HTML + CSV).
 
-**Operations** — Scheduled full-cycle re-runs (every 7/14/30 days), multi-brand with one-click switching, and a manual-sampling loop (export sheet → fill → re-import) that feeds the same metrics.
+**Operations** — Scheduled full-cycle re-runs (every 7/14/30 days; register the dashboard as a **macOS standing service** with `scripts/service.sh install` — starts at login, restarts on crash, keeps running with every terminal closed, so scheduled re-runs actually fire), multi-brand with one-click switching, and a manual-sampling loop that feeds the same metrics: export a full sheet or a **weekly buyer-intent sheet** (`sample-sheet --intent buyer --limit 20`), or use the **Chrome sampling assistant** below.
+
+**Sampling assistant (Chrome extension, `extension/`)** — for the engines without APIs, which is where the real users are. Side panel loads your buyer-intent queue (grouped by intent), fills the question into the chat box (**you** press Enter in the default manual mode), extracts the finished answer with all citation links in one click, and posts samples back to your local dashboard as A-grade evidence — a weekly check drops from ~30 minutes to ~10. An explicit opt-in auto-run mode exists with hard guardrails (you stay present, rate-limited, capped, halts on any CAPTCHA/anti-bot signal — ToS risks documented honestly in its README). Ships with `sandbox.sh`: one command launches a disposable clean-browser sandbox (no history, no cookies, extension auto-loaded) or a persistent logged-in profile for engines that require accounts, so sampling hygiene ("what a stranger sees, not what AI thinks of you") is one command instead of a discipline.
 
 ## 3. How it differs from other GEO tools
 
@@ -90,6 +92,8 @@ pip3 install requests beautifulsoup4 lxml
 
 # 2. Start the dashboard (opens your browser)
 python3 scripts/geo.py ui        # → http://127.0.0.1:8765
+#    macOS: ./scripts/service.sh install registers it as a standing service
+#    (starts at login, restarts on crash, survives closing every terminal)
 
 # 3. (Optional) Configure engine API keys
 #    A: in the dashboard — Settings → Engines & Keys → "Configure" (writes local .env)
@@ -137,9 +141,12 @@ python3 scripts/geo.py new --url https://example.com --market both
 ### Manual sampling for engines without APIs
 
 ```bash
-python3 scripts/geo.py sample-sheet  --slug <project>   # export sheet with per-question guidance
+python3 scripts/geo.py sample-sheet  --slug <project>                      # full sheet
+python3 scripts/geo.py sample-sheet  --slug <project> --intent buyer --limit 20   # weekly buyer-intent check
 python3 scripts/geo.py sample-import --slug <project> --file <sheet>
 ```
+
+Faster: install the Chrome sampling assistant (`extension/README.md`) and launch a clean sandbox with `extension/sandbox.sh` — queue, one-click extraction and upload, ~10 minutes per weekly round. Review imported samples in the dashboard's **Samples** page (machine parsing is correctable there; corrections recompute metrics instantly).
 
 ### CLI cheat sheet
 
@@ -192,8 +199,9 @@ This repo doubles as a Claude Code skill ([SKILL.md](SKILL.md)): drop it into yo
 ## Layout
 
 ```
-scripts/          All logic (geo.py CLI · dashboard.py server · ui.html single-page UI)
-references/       Methodology: sampling discipline, content patterns, citation structures
+scripts/          All logic (geo.py CLI · dashboard.py server · ui.html single-page UI · service.sh)
+extension/        Chrome sampling assistant + sandbox.sh + its own e2e tests
+references/       Methodology: sampling discipline, content patterns, attribution, citation structures
 tests/            Unit tests
 work/<slug>/      Per-project data (gitignored, never leaves your machine)
 docs/             Screenshots and the 40-second demo video
