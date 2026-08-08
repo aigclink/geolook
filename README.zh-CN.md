@@ -46,6 +46,7 @@
 - **拓词选题**：以品牌/竞品/品类为词根，拉**百度下拉 + Google 补全**的真实搜索词扩充选题（免费公开端点，无需 Key）；每期快照 diff 标「需求上升」参与选题排序；竞品词根扩出的替代/对比问法直达竞品对比页。只产候选，入库手动勾选，不动指标口径
 
 ![引擎表现](docs/screenshots/engines.png)
+![样本库](docs/screenshots/samples.png)
 
 ### 诊断 · 为什么是这样
 
@@ -54,6 +55,7 @@
 - **阵地地图**：19 个阵地（百科/榜单站/公众号/头条/知乎/技术社区/G2/Wikipedia/Reddit/YouTube…）按真实引用语料标注分量与优先级；每个阵地写清**建什么、建多少、节奏、谁来做**
 - **品牌事实库**：全站唯一口径来源——llms.txt、JSON-LD、内容草稿都从这里取事实；AI 说法逐条比对，比对过「事实一致性」才进健康分
 
+![站点体检 · 四层链条](docs/screenshots/siteaudit.png)
 ![阵地地图](docs/screenshots/channels.png)
 
 ### 提升 · 该做什么
@@ -65,6 +67,7 @@
 
 ![行动计划](docs/screenshots/plan.png)
 ![内容工作台](docs/screenshots/workbench.png)
+![发布渠道](docs/screenshots/publishing.png)
 
 ### 成效 · 做了有没有用
 
