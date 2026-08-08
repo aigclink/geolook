@@ -953,6 +953,41 @@ Object.assign(UI_D.ja,{
 'subreddit 先用自己的主页社区（u_你的用户名）试发，再进目标社区——先读对方的自我推广规则':'まず自分の u_ユーザー名 コミュニティで試投稿、その後目標 subreddit へ——宣伝ルールを先に確認',
 '永久素材封面 media_id（草稿必需）':'永久素材カバー media_id（必須）','文章公开链接（留空则自动用该文件最近一次 GitHub/WordPress 发布的 URL）':'記事公開 URL（空欄で直近の GitHub/WordPress 公開 URL）','发到哪个 subreddit（不带 r/）':'投稿先 subreddit（r/ なし）',
 });
+// 三语专项复查补漏：节点变体（带前后缀）、旧版遗留整句、后端新引擎标签
+Object.assign(UI_D.en,{
+'词数接近 0 的是前端渲染空壳页——AI 抓取器看到的是空白，这是国内官网最常见的致命伤。修复清单见「行动计划」。':'Word counts near 0 are client-rendered shell pages — AI crawlers see a blank. The most common fatal flaw on CN sites; fix list in Action Plan.',
+'品牌认知 · 点名探测题（展示品牌被复述率，不计入提及率，也不参与上方选题排序）':'Brand recognition · named probes (echo rate only — excluded from mention rate and topic ranking above)',
+'凭证写 .env（已 gitignore）；':'Credentials live in .env (gitignored); ',
+'Google AI Overviews（搜索页顶部 AI 摘要，无则记「未触发」）':'Google AI Overviews (AI summary atop search results; log "not triggered" when absent)',
+'秘塔AI搜索（引用为角标非链接，答案可采、引用常为 0 条）':'Metaso AI Search (citations are footnote markers, not links — answers extract fine, citations usually 0)',
+});
+Object.assign(UI_D.ja,{
+'词数接近 0 的是前端渲染空壳页——AI 抓取器看到的是空白，这是国内官网最常见的致命伤。修复清单见「行动计划」。':'語数ほぼ 0 はクライアント描画の空シェル——AI クローラーには白紙。修正リストはアクションプランへ。',
+'品牌认知 · 点名探测题（展示品牌被复述率，不计入提及率，也不参与上方选题排序）':'ブランド認知 · 指名質問（復唱率のみ表示——言及率にも上の並び順にも不算入）',
+'凭证写 .env（已 gitignore）；':'資格情報は .env（gitignore 済）に保存；',
+'Google AI Overviews（搜索页顶部 AI 摘要，无则记「未触发」）':'Google AI Overviews（検索上部の AI 要約。無い場合は「未発火」と記録）',
+'秘塔AI搜索（引用为角标非链接，答案可采、引用常为 0 条）':'秘塔AI検索（引用は脚注マーカーでリンクなし——回答は採取可、引用は通常 0 件）',
+});
+UI_RX.en.push(
+ [/^(\d+) 题已采 ·$/,'$1 sampled ·'],
+ [/^· (\d+) 题无内容$/,'· $1 no content'],
+ [/^· (\d+) 题失守$/,'· $1 lost'],
+ [/^建议配置 (\d+)\/(\d+) 已就绪 —— 从「优先 · 联网」的引擎开始$/,'Recommended: $1/$2 ready — start with a Priority·search engine'],
+ [/^(国内|海外) · 竞品有、你没有的信源$/,'$1 · channels rivals have that you don\'t'],
+ [/^· (文章全文的落点，也是社交渠道引流的回链来源——先发这里)$/,'· where full articles land, and the backlink source for social — publish here first'],
+ [/^· 按官方 API 可用性接入$/,'· only channels with usable official APIs'],
+ [/^· 社交渠道发「标题\+摘要\+回链」引流，长文先发通用渠道$/,'· social carries title + summary + backlink; long-form goes to General first'],
+);
+UI_RX.ja.push(
+ [/^(\d+) 题已采 ·$/,'$1 問採取済 ·'],
+ [/^· (\d+) 题无内容$/,'· $1 問コンテンツなし'],
+ [/^· (\d+) 题失守$/,'· $1 問陥落'],
+ [/^建议配置 (\d+)\/(\d+) 已就绪 —— 从「优先 · 联网」的引擎开始$/,'推奨設定 $1/$2 完了——「優先·検索あり」から開始'],
+ [/^(国内|海外) · 竞品有、你没有的信源$/,'$1 · 競合にあって自社にないソース'],
+ [/^· 文章全文的落点，也是社交渠道引流的回链来源——先发这里$/,'· 記事全文の掲載先、SNS の被リンク元——まずここへ'],
+ [/^· 按官方 API 可用性接入$/,'· 公式 API が使える先のみ'],
+ [/^· 社交渠道发「标题\+摘要\+回链」引流，长文先发通用渠道$/,'· SNS はタイトル＋要約＋リンク、長文は汎用チャネルへ先行'],
+);
 UI_RX.en.push(
  [/^为什么没有微博[\s\S]*极易失效——$/,'Why no Weibo / Toutiao / Xiaohongshu / Bilibili / Sohu / LinkedIn / Facebook / Instagram: none offer a personally usable official publishing API (or they require business review / short-lived tokens), and cookie-simulated posting violates their terms and breaks constantly — '],
  [/^。需要铺这些阵地：人工发布后到工作台「分发清单」勾掉，或用「自定义 Webhook」桥接你自己的工具。$/,'. To cover those channels: publish manually and tick them off in the Workbench distribution list, or bridge your own tooling via the custom webhook.']);
