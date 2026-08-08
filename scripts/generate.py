@@ -459,6 +459,13 @@ def run(slug: str, which: list[str] | None = None, with_draft: bool = False,
     adir = G.project_dir(slug) / "assets"
     which = which or ASSETS
     made: list[str] = []
+    # llms.txt 与 JSON-LD 必须挂在自有域名下才有意义，无站点项目跳过；
+    # 大纲/片段/归因这些"内容与度量"资产照常产出——它们落到外部阵地上
+    if not G.has_site(cfg):
+        skipped = [w for w in which if w in ("llms", "jsonld")]
+        if skipped:
+            G.info(f"无自有网站：跳过 {'/'.join(skipped)}（需部署到自有域名根目录/页面 head）")
+        which = [w for w in which if w not in ("llms", "jsonld")]
 
     if "llms" in which:
         (adir).mkdir(parents=True, exist_ok=True)

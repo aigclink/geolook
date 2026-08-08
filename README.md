@@ -141,6 +141,20 @@ python3 scripts/geo.py new --url https://example.com --market both
 6. **Verify** — Settings → "Auto-verify" re-crawls and judges tickets; after the next sampling round, check per-question before/after in **Verification**.
 7. **Operate** — enable scheduled re-runs (7/14/30 days); generate monthly reports and client packages in **Reports & Delivery**.
 
+### Products and brands without a website
+
+No site is fine — brand-owned sites account for only 1.37% of CN citations; AI visibility
+lives on external channels anyway:
+
+```bash
+python3 scripts/geo.py init --no-site --name "Product" --materials brief.md --market cn
+```
+
+Your brief replaces site copy as the basis for brand facts, competitors and the question
+bank (omit `--materials` and a template is generated for you). Only three things differ:
+crawl/audit are skipped, llms.txt and JSON-LD are not generated (they need your own domain),
+and **own-site citation rate shows "n/a" instead of 0**. Everything else runs as usual.
+
 ### Manual sampling for engines without APIs
 
 ```bash

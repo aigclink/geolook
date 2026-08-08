@@ -446,7 +446,8 @@ def analyze_answer(answer: str, cfg: dict, citations: list | None = None) -> dic
         except Exception:  # noqa: BLE001
             pass
 
-    own = urlparse(cfg["brand"]["site"]).netloc.lower().removeprefix("www.")
+    # 无自有网站：官网引用率不适用（None），不能算成 0
+    own = urlparse(cfg["brand"]["site"]).netloc.lower().removeprefix("www.") if G.has_site(cfg) else ""
 
     # 疑似负面：品牌每个命中点前 80 / 后 160 字符窗口内的负面线索词
     neg = set()
@@ -510,14 +511,16 @@ def aggregate(rows: list[dict], cfg: dict) -> dict:
             "top1_rate": round(sum(1 for r in mentioned if r["analysis"]["brand_rank"] == 1) / n, 3) if n else None,
             "top3_rate": round(sum(1 for r in mentioned if 1 <= r["analysis"]["brand_rank"] <= 3) / n, 3) if n else None,
             "avg_rank": round(sum(ranks) / len(ranks), 2) if ranks else None,
-            "own_domain_cite_rate": round(sum(1 for r in rs if r["analysis"]["own_domain_cited"]) / n, 3) if n else None,
+            "own_domain_cite_rate": (round(sum(1 for r in rs if r["analysis"]["own_domain_cited"]) / n, 3)
+                                     if n and G.has_site(cfg) else None),
             "competitor_mentions": dict(sorted(comp.items(), key=lambda x: -x[1])),
             "top_cited_domains": dict(sorted(dom.items(), key=lambda x: -x[1])[:15]),
             # 品牌认知：直接点名品牌时，AI 认不认识、有没有引到官网
             "probe": {
                 "samples": len(probe),
                 "recognized_rate": round(sum(1 for r in probe if r["analysis"]["brand_mentioned"]) / len(probe), 3) if probe else None,
-                "own_domain_cite_rate": round(sum(1 for r in probe if r["analysis"]["own_domain_cited"]) / len(probe), 3) if probe else None,
+                "own_domain_cite_rate": (round(sum(1 for r in probe if r["analysis"]["own_domain_cited"]) / len(probe), 3)
+                                          if probe and G.has_site(cfg) else None),
             },
         }
     return out

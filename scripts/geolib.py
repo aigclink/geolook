@@ -100,6 +100,13 @@ def load_config(slug: str) -> dict:
     return json.loads(p.read_text("utf-8"))
 
 
+def has_site(cfg: dict) -> bool:
+    """项目有没有自有网站。无站点项目（电商商品、线下品牌、小程序等）同样能做 GEO：
+    抓取/体检/站内资产这几步不适用，但采样、竞品、阵地、内容、验收全都照常。
+    判据只看 brand.site 是否为空——不引入第二个真相源。"""
+    return bool((cfg.get("brand") or {}).get("site", "").strip())
+
+
 def save_config(slug: str, cfg: dict):
     """写配置前先备份。geo.json 里是一期的人工投入（问题库、竞品、口径），
     被误覆盖的代价远大于留几个备份文件。"""

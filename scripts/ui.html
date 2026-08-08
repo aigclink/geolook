@@ -875,8 +875,12 @@ UI_RX.ja.push(
  [/^有 · (\d+) 条 URL$/,'あり · $1 URL'],
 );
 Object.assign(UI_D.en,{'可引段落':'Quotable §',
+'本项目没有自有网站，技术层不适用':'No website for this project — the technical layer does not apply',
+'无自有网站的商品/品牌（电商、线下、小程序等）不需要站点体检——AI 可见性靠外部阵地与内容承接。到「阵地地图」看该建哪些阵地，「问题库」看该写哪些内容。':'Products and brands without a site (marketplace listings, offline, mini-programs) need no site audit — AI visibility rests on external channels and content. See Channel Map for what to build and Questions for what to write.',
 '可被独立引用的段落数 / H2 小节数——检索按段落选材，页面长不等于有可引之材':'Independently quotable passages / H2 sections — retrieval picks passages, a long page ≠ quotable material'});
 Object.assign(UI_D.ja,{'可引段落':'引用可能段落',
+'本项目没有自有网站，技术层不适用':'自社サイトがない案件——技術層は対象外',
+'无自有网站的商品/品牌（电商、线下、小程序等）不需要站点体检——AI 可见性靠外部阵地与内容承接。到「阵地地图」看该建哪些阵地，「问题库」看该写哪些内容。':'自社サイトを持たない商品・ブランド（EC 出品、オフライン、ミニプログラム等）にサイト監査は不要——AI 可視性は外部チャネルとコンテンツで決まる。チャネルマップと質問バンクへ。',
 '可被独立引用的段落数 / H2 小节数——检索按段落选材，页面长不等于有可引之材':'独立引用可能な段落数 / H2 節数——検索は段落単位で選ぶ。長いページ＝引用素材ではない'});
 UI_RX.en.push(
  [/^· (\d+) 页整页没有可独立引用的段落$/,'· $1 pages have no independently quotable passage'],
@@ -2667,6 +2671,8 @@ async function obRetry(){
 function vSiteAudit(){
   const A=D.audit||{},site=A.site||{},lc=A.language_coverage||{},gd=A.grade_distribution||{};
   const pages=A.pages||[];
+  if(!D.brand.site)return `<div style="padding:32px 44px">${head('诊断 · 站点体检','本项目没有自有网站，技术层不适用',
+    '无自有网站的商品/品牌（电商、线下、小程序等）不需要站点体检——AI 可见性靠外部阵地与内容承接。到「阵地地图」看该建哪些阵地，「问题库」看该写哪些内容。')}</div>`;
   if(!A.page_count)return `<div style="padding:32px 44px">${head('诊断 · 站点体检','还没有体检数据','到「设置 → 运行任务」跑「抓取站点」+「页面体检」。')}</div>`;
   const probe=site.ai_ua_probe||{},probeN=Object.keys(probe).length;
   const uaBad=(site.ai_ua_blocked||[]).length;

@@ -37,11 +37,20 @@ DEFAULT_PLATFORMS = {
 
 
 def cmd_init(a):
-    url = a.url.rstrip("/")
-    if not url.startswith("http"):
-        url = "https://" + url
-    host = urlparse(url).netloc.removeprefix("www.")
-    slug = a.slug or G.slugify(host.split(".")[0])
+    # 无站点模式：电商商品、线下品牌、小程序等没有自有官网的对象同样能做 GEO。
+    # 抓取/体检/站内资产不适用，采样、竞品、阵地、内容、验收全部照常。
+    no_site = getattr(a, "no_site", False) or not (a.url or "").strip()
+    if no_site:
+        if not a.name:
+            G.die("无站点项目必须用 --name 指定品牌/商品名（没有官网可供推断）")
+        url, host = "", ""
+        slug = a.slug or G.slugify(a.name)
+    else:
+        url = a.url.rstrip("/")
+        if not url.startswith("http"):
+            url = "https://" + url
+        host = urlparse(url).netloc.removeprefix("www.")
+        slug = a.slug or G.slugify(host.split(".")[0])
 
     # 已存在的项目绝不覆盖：geo.json 里有问题库、竞品、事实口径，
     # 覆盖等于把一期的人工投入清零。要重建必须显式加 --force。
@@ -53,7 +62,7 @@ def cmd_init(a):
               f"或确认要清空后加 --force")
 
     name = a.name
-    if not name:
+    if not name and url:
         res = G.fetch(url)
         if res["html"]:
             soup = G.parse_html(res["html"])
@@ -86,8 +95,31 @@ def cmd_init(a):
     G.save_config(slug, cfg)
     for sub in ("evidence", "samples", "metrics", "reports", "history", "content"):
         (G.project_dir(slug) / sub).mkdir(parents=True, exist_ok=True)
+
+    # 无站点项目：材料文本取代官网正文，成为品牌事实/竞品/问题库的推导底座
+    mat_path = G.project_dir(slug) / "content" / "materials.md"
+    materials = (getattr(a, "materials", "") or "").strip()
+    if materials:
+        src = Path(materials)
+        text = src.read_text("utf-8") if src.exists() else materials
+        mat_path.write_text(text, "utf-8")
+    elif no_site and not mat_path.exists():
+        mat_path.write_text(
+            f"# {name} · 商品/品牌介绍材料\n\n"
+            "> 无自有官网的项目，这份材料取代官网正文，是推导品牌事实、竞品与问题库的唯一依据。\n"
+            "> 写得越具体，推导越准；不知道的留空，不要编——bootstrap 会把空缺标成「待确认」。\n\n"
+            "## 它是什么\n（一句话定义：面向谁、属于什么品类、解决什么问题）\n\n"
+            "## 卖点与关键数字\n（规格、价格区间、产能、认证、销量等可核实的事实）\n\n"
+            "## 目标用户与典型场景\n\n"
+            "## 已知竞品\n（真实存在的品牌名，一行一个）\n\n"
+            "## 售卖/曝光渠道\n（天猫/京东/抖音店铺、小程序、线下门店等）\n", "utf-8")
+
     print(f"[geo] 项目已创建：{G.project_dir(slug)/'geo.json'}（品牌：{name}）")
-    print("[geo] 下一步：让 Claude 补全 brand/competitors/questions，再跑 crawl")
+    if no_site:
+        print(f"[geo] 无站点模式：抓取/体检/站内资产不适用，其余流程照常")
+        print(f"[geo] 下一步：填写 {mat_path} 后跑 bootstrap")
+    else:
+        print("[geo] 下一步：让 Claude 补全 brand/competitors/questions，再跑 crawl")
     return cfg
 
 
@@ -446,7 +478,11 @@ def main():
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("init", help="新建项目")
-    s.add_argument("--url", required=True)
+    s.add_argument("--url", default="", help="官网地址；无自有网站时留空并加 --no-site")
+    s.add_argument("--no-site", action="store_true", dest="no_site",
+                   help="无自有网站（电商商品/线下品牌/小程序等），需配 --name")
+    s.add_argument("--materials", default="",
+                   help="商品/品牌介绍材料：文件路径或直接给文本，取代官网正文作为推导底座")
     s.add_argument("--name")
     s.add_argument("--slug")
     s.add_argument("--market", choices=["cn", "global", "both"], default="cn")

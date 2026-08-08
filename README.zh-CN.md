@@ -176,6 +176,18 @@ python3 scripts/geo.py new --url https://example.com --market both
 
 **第 7 步 · 长期运营**：「设置」开启周期复跑（每 7/14/30 天自动跑一期）；「报告与交付」生成月报与客户交付包。
 
+### 没有官网的商品/品牌
+
+没有自有网站也能做 GEO——官网只占国内引用的 1.37%，AI 可见性主要靠外部阵地：
+
+```bash
+python3 scripts/geo.py init --no-site --name "商品名" --materials 介绍材料.md --market cn
+```
+
+介绍材料取代官网正文，成为品牌事实、竞品与问题库的推导底座（不给 `--materials`
+会生成模板让你填）。差异只有三处：抓取/体检自动跳过、llms.txt 与 JSON-LD 不产出
+（需挂自有域名）、**引用官网率显示「不适用」而非 0**。其余全部照常。
+
 ### 无 API 引擎的人工采样
 
 ```bash

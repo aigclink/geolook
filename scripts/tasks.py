@@ -67,7 +67,9 @@ def _has_issue(page: dict, code: str, text_fallback: str) -> bool:
 
 
 def from_audit(audit: dict, cfg: dict, seq) -> list[dict]:
-    """站点技术层与页面层工单。"""
+    """站点技术层与页面层工单。无自有网站的项目整层不适用，直接返回空。"""
+    if audit.get("no_site") or not G.has_site(cfg):
+        return []
     out = []
     site = audit.get("site", {})
     market = cfg.get("market", "cn")
@@ -365,7 +367,9 @@ def build(slug: str) -> dict:
     pdir = G.project_dir(slug)
     audit = G.read_json(pdir / "audit.json")
     if not audit:
-        G.die("缺 audit.json，先运行 audit")
+        if G.has_site(cfg):
+            G.die("缺 audit.json，先运行 audit")
+        audit = {"site": {}, "pages": [], "block_gap": [], "no_site": True}
 
     files = sorted((pdir / "metrics").glob("*.json")) if (pdir / "metrics").exists() else []
     metrics = G.read_json(files[-1], None) if files else None

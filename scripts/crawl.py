@@ -237,6 +237,9 @@ def check_crawl_health(pages: list[dict]):
 
 def run(slug: str, max_pages: int | None = None, delay: float = 0.5) -> dict:
     cfg = G.load_config(slug)
+    if not G.has_site(cfg):
+        G.info("无自有网站项目：跳过抓取（采样、竞品、阵地、内容、验收不受影响）")
+        return {"slug": slug, "no_site": True, "pages_crawled": 0, "pages_ok": 0}
     root = cfg["brand"]["site"].rstrip("/")
     limit = max_pages or cfg.get("pages", {}).get("max", 25)
     outdir = G.project_dir(slug) / "evidence"

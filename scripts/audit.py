@@ -271,6 +271,15 @@ def run(slug: str) -> dict:
     cfg = G.load_config(slug)
     pdir = G.project_dir(slug)
     pages = G.read_jsonl(pdir / "evidence" / "pages.jsonl")
+    if not pages and not G.has_site(cfg):
+        G.info("无自有网站项目：跳过站点体检（技术层不适用；内容与阵地诊断照常）")
+        out = {"slug": slug, "audited_at": G.now_iso(), "market": cfg.get("market", "cn"),
+               "no_site": True, "site": {}, "site_issues": [], "layers": [],
+               "page_count": 0, "avg_score": None, "grade_distribution": {},
+               "block_gap": [], "pages": [], "keywords_used": [],
+               "language_coverage": {}}
+        G.write_json(pdir / "audit.json", out)
+        return out
     if not pages:
         G.die("没有抓取结果，先运行：python3 scripts/geo.py crawl --slug " + slug)
     site = G.read_json(pdir / "evidence" / "site.json", {})

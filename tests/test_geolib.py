@@ -79,3 +79,32 @@ class TestJsonIO(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestNoSiteMode(unittest.TestCase):
+    """无自有网站项目（电商商品/线下品牌/小程序）的判定与降级。"""
+
+    def test_has_site(self):
+        self.assertTrue(G.has_site({"brand": {"site": "https://a.com"}}))
+        for empty in ({"brand": {"site": ""}}, {"brand": {"site": "   "}}, {"brand": {}}, {}):
+            self.assertFalse(G.has_site(empty), empty)
+
+    def test_no_site_metrics_are_none_not_zero(self):
+        """无站点时「引用官网率」必须是 None（不适用），绝不能退化成 0——
+        0 会被读成「一次都没被引用」，那是编数。"""
+        import sample as S
+        cfg = {"brand": {"name": "商品", "site": "", "aliases": []}, "competitors": [],
+               "questions": [{"id": "q001", "text": "有哪些好用的绿茶", "group": "推荐"}]}
+        rows = [{"platform": "deepseek", "market": "cn", "question_id": "q001",
+                 "question": "有哪些好用的绿茶", "ok": True,
+                 "analysis": {"brand_mentioned": False, "brand_rank": 0, "candidates": [],
+                              "competitors_mentioned": [], "cited_domains": ["x.com"],
+                              "own_domain_cited": False, "answer_chars": 100}}]
+        agg = S.aggregate(rows, cfg)
+        self.assertIsNone(agg["deepseek"]["own_domain_cite_rate"])
+        self.assertEqual(agg["deepseek"]["mention_rate"], 0.0)   # 提及率照常可测
+
+    def test_no_site_generates_no_site_tickets(self):
+        import tasks as T
+        cfg = {"brand": {"name": "商品", "site": ""}, "market": "cn"}
+        self.assertEqual(T.from_audit({"no_site": True}, cfg, iter(["T-001"])), [])

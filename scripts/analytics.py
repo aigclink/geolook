@@ -74,9 +74,11 @@ def health(slug: str, bp: dict | None, factcheck: list, rows_latest) -> dict:
     cfg = G.load_config(slug)
     own = _own_host(cfg)
     up = _unprompted(rows_latest)
+    # 无自有网站时「引用官网率」无从谈起——记 None（不适用），
+    # 由权重重整摊到其余维度，绝不退化成 0 假装"一次都没被引用"
     subs: dict[str, float | None] = {
         "mention": _mention(up),
-        "cite": _cite_share(up, own)[0],
+        "cite": _cite_share(up, own)[0] if G.has_site(cfg) else None,
         "channel": None, "content": None, "fact": None,
     }
     if bp:

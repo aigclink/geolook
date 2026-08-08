@@ -24,9 +24,20 @@ GROUPS = ["推荐", "比较", "替代", "价格", "风险", "品牌验证", "场
 
 
 def _site_digest(slug: str, limit: int = 14000) -> str:
-    """把抓到的页面正文压成一份摘要喂给 LLM。首页和高分页优先。"""
+    """把抓到的页面正文压成一份摘要喂给 LLM。首页和高分页优先。
+
+    无自有网站的项目（电商商品、线下品牌等）没有页面可抓，改用人工填写的
+    content/materials.md 作为唯一依据——口径不变：只从给定材料里抽，抽不到标「待确认」。"""
     pages = G.read_jsonl(G.project_dir(slug) / "evidence" / "pages.jsonl")
     if not pages:
+        mat = G.project_dir(slug) / "content" / "materials.md"
+        if mat.exists():
+            text = mat.read_text("utf-8", "replace").strip()
+            # 只剩模板骨架（没填实际内容）时视为空，避免拿占位符去推导
+            body = "\n".join(ln for ln in text.splitlines()
+                              if ln.strip() and not ln.lstrip().startswith(("#", ">", "（")))
+            if len(body) >= 40:
+                return f"\n## 商品/品牌介绍材料（无自有网站，以下是唯一依据）\n{text[:limit]}\n"
         return ""
     audit = G.read_json(G.project_dir(slug) / "audit.json", {})
     score = {p["url"]: p["score"] for p in audit.get("pages", [])}
@@ -282,7 +293,8 @@ def run(slug: str, skip_llm: bool = False) -> dict:
     if not digest:
         G.die("没有抓取结果，先运行 crawl")
 
-    G.info(f"自动引导：从 {len(digest)} 字官网正文推导项目底座")
+    src_label = "官网正文" if G.has_site(G.load_config(slug)) else "介绍材料"
+    G.info(f"自动引导：从 {len(digest)} 字{src_label}推导项目底座")
     if skip_llm:
         G.info("  --skip-llm：跳过 LLM 推导，只建空底座")
         return cfg
@@ -330,5 +342,5 @@ def run(slug: str, skip_llm: bool = False) -> dict:
            f" / 海外 {sum(1 for q in qs if q['market']=='global')}"
            f" / 通用 {sum(1 for q in qs if q['market']=='both')}）")
     if brand.get("uncertain"):
-        G.info("  官网未提供、需人工补齐：" + "、".join(brand["uncertain"][:5]))
+        G.info(f"  {src_label}未提供、需人工补齐：" + "、".join(brand["uncertain"][:5]))
     return cfg
