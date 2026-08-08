@@ -10,6 +10,8 @@
 
 ![License](https://img.shields.io/badge/license-MIT-9184d9) ![Python](https://img.shields.io/badge/python-3.9%2B-9184d9) ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-9184d9) ![Deps](https://img.shields.io/badge/deps-requests%20·%20bs4%20·%20lxml-9184d9)
 
+<a href="https://www.producthunt.com/products/geolook?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-geolook" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1211264&theme=dark&t=1786200566986" alt="GeoLook - オープンソースのセルフホスト型 GEO 実装プラットフォーム | Product Hunt" width="250" height="54" /></a>
+
 ![Product demo](docs/demo.ja.gif)
 
 🌐 [公式サイト geolook.cc](https://geolook.cc) · 🔍 [ライブデモ（読み取り専用）](https://geolook.cc/demo/) · 📹 [HD デモ動画 (mp4)](docs/demo.ja.mp4) · 🖼 [全スクリーンショット](docs/screenshots-ja/)

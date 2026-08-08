@@ -10,6 +10,8 @@
 
 ![License](https://img.shields.io/badge/license-MIT-9184d9) ![Python](https://img.shields.io/badge/python-3.9%2B-9184d9) ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-9184d9) ![Deps](https://img.shields.io/badge/deps-requests%20·%20bs4%20·%20lxml-9184d9)
 
+<a href="https://www.producthunt.com/products/geolook?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-geolook" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1211264&theme=dark&t=1786200566986" alt="GeoLook - 开源自托管的全流程 GEO 实施平台 | Product Hunt" width="250" height="54" /></a>
+
 ![产品演示](docs/demo.gif)
 
 🌐 [官网 geolook.cc](https://geolook.cc) · 🔍 [在线演示（只读）](https://geolook.cc/demo/) · 📹 [高清演示视频 (mp4)](docs/demo.mp4) · 🖼 [全部截图](docs/screenshots/)
