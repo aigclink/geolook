@@ -284,10 +284,13 @@ class Handler(BaseHTTPRequestHandler):
             if p.startswith("/api/samples/"):
                 import sample as S
                 slug = p[len("/api/samples/"):]
+                try:
+                    limit = max(1, min(2000, int(q.get("limit", ["300"])[0])))
+                except ValueError:
+                    limit = 300
                 return self._json(S.list_samples(
                     slug, date=q.get("date", [""])[0], platform=q.get("platform", [""])[0],
-                    qid=q.get("qid", [""])[0], flag=q.get("flag", [""])[0],
-                    limit=int(q.get("limit", ["300"])[0])))
+                    qid=q.get("qid", [""])[0], flag=q.get("flag", [""])[0], limit=limit))
             if p.startswith("/api/sample/"):
                 import sample as S
                 slug = p[len("/api/sample/"):]
@@ -298,7 +301,10 @@ class Handler(BaseHTTPRequestHandler):
                 import sample as S
                 slug = p[len("/api/collect/queue/"):]
                 cfg = G.load_config(slug)
-                limit = int(q.get("limit", ["20"])[0])
+                try:
+                    limit = max(1, min(200, int(q.get("limit", ["20"])[0])))
+                except ValueError:
+                    limit = 20
                 intent = q.get("intent", [""])[0]
                 picked = [g for g in (q.get("groups", [""])[0] or "").split(",") if g.strip()]
                 if not picked and intent == "buyer":
@@ -474,6 +480,13 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"ok": False, "error": "records 必须是非空数组"}, 400)
                 if len(records) > 200:
                     return self._json({"ok": False, "error": "单次最多 200 条"}, 400)
+                # 采样/导入类任务运行中会写同一份当日样本文件，先挡回避免并发写丢行
+                jid = J.running_for(slug)
+                job = J.get(jid) if jid else None
+                if job and job.get("action") in ("sample", "sample-import", "serve", "cycle", "autopilot"):
+                    return self._json({"ok": False,
+                                       "error": f"任务「{job.get('label') or job.get('action')}」正在运行，"
+                                                "会写同一份样本文件——等它结束后再上传"}, 409)
                 with G.project_lock(slug):
                     res = S.collect_import(slug, records)
                 return self._json(res, 200 if res.get("ok") else 400)

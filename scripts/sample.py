@@ -720,7 +720,9 @@ def sample_import(slug: str, file: str) -> dict:
 
     if not rows:
         G.die("没解析到任何答案，检查 ```answer 代码块是否填写")
-    metrics = store_manual_rows(slug, cfg, rows)
+    # CLI 路径也要拿项目锁：插件回传（dashboard 持锁）可能同时写同一份当日文件
+    with G.project_lock(slug):
+        metrics = store_manual_rows(slug, cfg, rows)
     G.info(f"导入 {len(rows)} 条人工样本")
     return metrics
 

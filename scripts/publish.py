@@ -218,27 +218,44 @@ def _oauth1_header(method: str, url: str, ck: str, cs: str, tk: str, ts: str) ->
     return "OAuth " + ", ".join(f'{q(k)}="{q(v)}"' for k, v in sorted(p.items()))
 
 
-def _latest_public_url(fname: str) -> str:
+def _latest_public_url(recs: list, fname: str) -> str:
     """该文件最近一次长文渠道（GitHub/WordPress/Webhook）发布成功的 URL——
     社交渠道引流的默认回链：先发长文，再发社交。"""
-    for r in reversed(_pub_records_cache or []):
+    for r in reversed(recs or []):
         if r.get("ok") and r.get("url") and r.get("path", "").endswith(fname) \
                 and r.get("platform") in ("github", "wordpress", "webhook"):
             return r["url"]
     return ""
 
 
-_pub_records_cache: list = []   # publish() 调用前灌入，供 _pub_x 找回链
+def _x_len(s: str) -> int:
+    """X 的加权长度：CJK/全角计 2，其余计 1（URL 另算固定 23）。"""
+    return sum(2 if ord(c) > 0x2E80 else 1 for c in s)
+
+
+def _x_trim(s: str, budget: int) -> str:
+    out, used = [], 0
+    for c in s:
+        w = 2 if ord(c) > 0x2E80 else 1
+        if used + w > budget:
+            break
+        out.append(c)
+        used += w
+    return "".join(out)
 
 
 def _pub_x(cfg, text, title, fname):
-    link = (cfg.get("link_url") or "").strip() or _latest_public_url(fname)
+    link = (cfg.get("link_url") or "").strip() \
+        or _latest_public_url(cfg.get("_records") or [], fname)
     # 摘要：正文第一段非标题文本
     para = next((ln.strip() for ln in text.splitlines()
                  if ln.strip() and not ln.startswith("#")), "")
-    # 链接在 X 内固定折算 23 字符；中文按 2 权重计，保守用字符数上限 130 截断
-    room = 130 - (len(title) // 1)
-    tweet = title + ("\n\n" + para[:max(0, room)] if para and room > 20 else "")
+    # 预算 280 加权单位：链接固定折算 23 + 换行，再留 2 个单位余量防边界
+    budget = 280 - (25 if link else 0) - 2
+    tweet = _x_trim(title, budget)
+    room = budget - _x_len(tweet) - 2   # 减去两个换行
+    if para and room > 40:
+        tweet += "\n\n" + _x_trim(para, room)
     if link:
         tweet += "\n" + link
     hdr = _oauth1_header("POST", "https://api.x.com/2/tweets",
@@ -320,9 +337,11 @@ def publish(slug: str, code: str, rel: str, title: str = "") -> dict:
     except (ValueError, FileNotFoundError):
         return {"ok": False, "error": f"文件不可用：{rel}"}
     title = title or _title_of(text, fname)
-    global _pub_records_cache
-    _pub_records_cache = records(slug)   # 供社交渠道找该文件的长文回链
-    res = _IMPL[code](_cfg(slug, code), text, title, fname)
+    # 发布记录随 cfg 传入（不用模块级全局：看板是多线程服务，
+    # 并发发布不同项目时全局会互相污染回链归属）
+    cfg = dict(_cfg(slug, code))
+    cfg["_records"] = records(slug)
+    res = _IMPL[code](cfg, text, title, fname)
     entry = {"at": G.now_iso(), "platform": code, "platform_name": PUBLISHERS[code]["name"],
              "path": rel, "title": title, "ok": res.get("ok", False),
              "url": res.get("url", ""), "note": res.get("note", ""),

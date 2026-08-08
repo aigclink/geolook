@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "GeoLook 采样助手",
   "version": "0.1.0",
-  "description": "AI 答案人工采样助手：题目队列（填入不代发）、答案与引用一键提取、回传本机 GeoLook 看板。不做任何自动提交。",
+  "description": "AI 答案人工采样助手：题目队列、答案与引用一键提取、回传本机 GeoLook 看板。默认手动模式填入不代发；「自动跑队列」需显式开启且人在场，验证码/风控即停。",
   "permissions": [
     "sidePanel",
     "storage",
