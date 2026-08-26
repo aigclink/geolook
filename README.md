@@ -22,6 +22,11 @@ English · [简体中文](README.zh-CN.md) · [日本語](README.ja.md)
 
 > GEO = Generative Engine Optimization: getting AI engines (ChatGPT, Perplexity, Gemini, DeepSeek, Doubao…) to **proactively mention and cite your brand** when answering user questions. Not geographic info, not classic SEO.
 
+## What's new
+
+- **Doubao Web sampling**: the Chrome sampling assistant now recognizes `doubao.com`, detects login and anti-bot states, and extracts completed answers and citation links. Samples use the `doubao_web` platform code and are deliberately kept separate from `doubao` (Volcengine Ark API).
+- **Evidence hygiene for web sampling**: the assistant supports disposable clean-browser sandboxes and persistent dedicated profiles. Each imported sample records its environment, so personal-account results are marked for review instead of silently mixing with neutral observations.
+
 ## 1. Problems it solves
 
 More and more users ask AI directly — "best tools for X", "X vs Y, which one". If your brand:
@@ -38,7 +43,7 @@ More and more users ask AI directly — "best tools for X", "X vs Y, which one".
 
 Four stages plus operations, all in one self-hosted dashboard:
 
-**Status** — Engine performance across 17 engines (10 automated via API + 7 manual, incl. Google AI Overviews and Metaso): mention rate, rank, citation share, what each engine actually cites, **sample replay** of raw answers, suspected-negative flags; **brand mention distribution** (you vs. competitors, per engine and aggregated); competitor tables with each rival's strongest engine one click away — plus each rival's **citation-source mix** and a "channels they have that you don't" hit-list; a 7-category question bank with **intent-group cards** (buyer / educate / probe — see at a glance which intent class you're absent from) where every question gets a **diagnosis type** (suspected-negative > competitor-dominated > absent > low-ranked); a **sample library** where every AI answer's metadata is browsable and human-correctable (regex parsing misreads — name collisions, negation — get fixed here; corrections recompute metrics instantly and survive re-sampling), with per-sample **citation-source breakdown** (domain × count · share) and sampling-environment provenance (sandbox / incognito / dedicated profile / personal — personal auto-downgrades to "needs review").
+**Status** — Engine performance across 18 engines (10 automated via API + 8 manual/web, including Doubao Web, Google AI Overviews and Metaso): mention rate, rank, citation share, what each engine actually cites, **sample replay** of raw answers, suspected-negative flags; **brand mention distribution** (you vs. competitors, per engine and aggregated); competitor tables with each rival's strongest engine one click away — plus each rival's **citation-source mix** and a "channels they have that you don't" hit-list; a 7-category question bank with **intent-group cards** (buyer / educate / probe — see at a glance which intent class you're absent from) where every question gets a **diagnosis type** (suspected-negative > competitor-dominated > absent > low-ranked); a **sample library** where every AI answer's metadata is browsable and human-correctable (regex parsing misreads — name collisions, negation — get fixed here; corrections recompute metrics instantly and survive re-sampling), with per-sample **citation-source breakdown** (domain × count · share) and sampling-environment provenance (sandbox / incognito / dedicated profile / personal — personal auto-downgrades to "needs review").
 
 **Keyword mining** — expand the question bank from real search demand: Baidu suggest (CN) + Google autocomplete (Global) terms from brand/competitor/category roots (free public endpoints, no keys). Each round is snapshot-diffed to flag **rising demand** (affects topic ordering, never metrics); alternative/vs phrasings mined from competitor roots feed the Competitors page. Candidates only — adding to the bank is always a manual check.
 
@@ -60,7 +65,7 @@ Four stages plus operations, all in one self-hosted dashboard:
 
 **Operations** — Scheduled full-cycle re-runs (every 7/14/30 days; register the dashboard as a **macOS standing service** with `scripts/service.sh install` — starts at login, restarts on crash, keeps running with every terminal closed, so scheduled re-runs actually fire), multi-brand with one-click switching, and a manual-sampling loop that feeds the same metrics: export a full sheet or a **weekly buyer-intent sheet** (`sample-sheet --intent buyer --limit 20`), or use the **Chrome sampling assistant** below.
 
-**Sampling assistant (Chrome extension, `extension/`)** — for the engines without APIs, which is where the real users are. Side panel loads your buyer-intent queue (grouped by intent), fills the question into the chat box (**you** press Enter in the default manual mode), extracts the finished answer with all citation links in one click, and posts samples back to your local dashboard as A-grade evidence — a weekly check drops from ~30 minutes to ~10. An explicit opt-in auto-run mode exists with hard guardrails (you stay present, rate-limited, capped, halts on any CAPTCHA/anti-bot signal — ToS risks documented honestly in its README). Ships with `sandbox.sh`: one command launches a disposable clean-browser sandbox (no history, no cookies, extension auto-loaded) or a persistent logged-in profile for engines that require accounts, so sampling hygiene ("what a stranger sees, not what AI thinks of you") is one command instead of a discipline.
+**Sampling assistant (Chrome extension, `extension/`)** — for the engines without APIs, which is where the real users are. Side panel loads your buyer-intent queue (grouped by intent), fills the question into the chat box (**you** press Enter in the default manual mode), extracts the finished answer with all citation links in one click, and posts samples back to your local dashboard as A-grade evidence — a weekly check drops from ~30 minutes to ~10. It supports **Doubao Web** (`doubao_web`) with login and anti-bot detection; this measurement is never combined with the Ark API (`doubao`). An explicit opt-in auto-run mode exists with hard guardrails (you stay present, rate-limited, capped, halts on any CAPTCHA/anti-bot signal — ToS risks documented honestly in its README). Ships with `sandbox.sh`: one command launches a disposable clean-browser sandbox (no history, no cookies, extension auto-loaded) or a persistent logged-in profile for engines that require accounts, so sampling hygiene ("what a stranger sees, not what AI thinks of you") is one command instead of a discipline.
 
 ## 3. How it differs from other GEO tools
 
@@ -174,6 +179,8 @@ python3 scripts/geo.py sample-import --slug <project> --file <sheet>
 ```
 
 Faster: install the Chrome sampling assistant (`extension/README.md`) and launch a clean sandbox with `extension/sandbox.sh` — queue, one-click extraction and upload, ~10 minutes per weekly round. Review imported samples in the dashboard's **Samples** page (machine parsing is correctable there; corrections recompute metrics instantly).
+
+For Doubao consumer-side results, use the assistant on `doubao.com`; it stores them as `doubao_web`. Do not import them as `doubao`: Ark API and Web samples can differ in retrieval, citations, and personalization, so GeoLook reports them separately.
 
 ### CLI cheat sheet
 

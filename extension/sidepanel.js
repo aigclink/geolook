@@ -12,7 +12,8 @@ let GROUPS = [];           // 选中的意图分组（空 = 全部）
 const HOST2PLAT = {
   "chatgpt.com": "chatgpt", "chat.openai.com": "chatgpt",
   "claude.ai": "claude_web",
-  "doubao.com": "doubao_app",
+  "doubao.com": "doubao_web",
+  "www.doubao.com": "doubao_web",
   "google.com": "google_aio",
   "chat.baidu.com": "baidu", "yiyan.baidu.com": "baidu", "wenxin.baidu.com": "baidu",
   "metaso.cn": "metaso", "n.cn": "nano_ai",
@@ -24,7 +25,7 @@ const store = {
   async set(k, v) { await chrome.storage.local.set({ [k]: v }); },
 };
 
-function serverUrl() { return $("#server").value.trim().replace(/\/$/, "") || "http://127.0.0.1:8765"; }
+function serverUrl() { return $("#server").value.trim().replace(/\/$/, "") || "http://127.0.0.1:9527"; }
 function slug() { return $("#slug").value; }
 
 async function apiGet(path) {
@@ -80,6 +81,20 @@ function currentPlatform() {
   return $("#platSel").value || "";
 }
 
+async function checkDoubaoState() {
+  if (currentPlatform() !== "doubao_web") return;
+  const tab = await activeTab();
+  if (!tab) return;
+  try {
+    const state = await chrome.tabs.sendMessage(tab.id, { type: "geolook-platform-status" });
+    if (state && state.state === "login") {
+      $("#exmeta").textContent = "豆包 Web 需要登录专用采样账号后再开始";
+    } else if (state && state.state === "blocked") {
+      $("#exmeta").textContent = "检测到豆包风控/验证页面，请人工处理后重试";
+    }
+  } catch (e) { /* 页面尚未注入脚本时由填入/提取操作给出具体提示 */ }
+}
+
 function collectedKey(p, qid) { return `${p}::${qid}`; }
 
 async function renderQueue() {
@@ -114,7 +129,7 @@ async function loadProjects() {
     const saved = await store.get("slug");
     if (saved && ps.some(p => p.slug === saved)) $("#slug").value = saved;
   } catch (e) {
-    $("#qmeta").textContent = "连不上看板——先启动 geo.py ui";
+    $("#qmeta").textContent = "加载失败：无法连接看板，请确认端口与看板一致（默认 9527）";
   }
 }
 
@@ -141,6 +156,7 @@ async function loadQueue() {
     $("#platSel").innerHTML = QUEUE.platforms
       .map(p => `<option value="${p.code}">${p.label}</option>`).join("");
     await detectPlatform();
+    await checkDoubaoState();
     renderGroups();
     SEL = QUEUE.questions[0] || null;
     renderQueue();
@@ -157,7 +173,7 @@ async function sendToTab(msg) {
 }
 
 $("#load").onclick = loadQueue;
-$("#platSel").onchange = renderQueue;
+$("#platSel").onchange = async () => { renderQueue(); await checkDoubaoState(); };
 $("#pickbuyer").onclick = async () => {
   GROUPS = (QUEUE.groups || []).filter(g => g.buyer).map(g => g.name);
   await store.set("groups", GROUPS); loadQueue();

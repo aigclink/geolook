@@ -1223,6 +1223,8 @@ function vOverview(){
 async function vEngines(){
   if(!KEYS)KEYS=await api('/api/keys');
   if(!Array.isArray(KEYS))KEYS=[];
+  // 豆包 Web 是真实消费端人工采样，单独读取原始样本，避免与方舟 API 汇总口径混淆。
+  const doubaoRows=await api(`/api/samples/${SLUG}?platform=doubao_web&limit=8`);
   const a=D.analytics,engs=a.engines||[];
   const manual=(KEYS||[]).filter(k=>k.ok!==true&&!engs.some(e=>e.platform===k.code));
   const sel=ST.engSel||((engs[0]||{}).platform);
@@ -1233,8 +1235,25 @@ async function vEngines(){
     ?esc(ex.excerpt.slice(0,ex.brand_pos))+`<span class="uln">${esc(brand)}</span>`+esc(ex.excerpt.slice(ex.brand_pos+brand.length))
     :esc(ex.excerpt)):'';
   const own=(D.brand.site||'').replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,'');
+  const dbRows=(doubaoRows&&doubaoRows.rows)||[];
+  const dbReview=dbRows.filter(x=>x.needs_review).length;
+  const dbStatus=dbRows.length?`已采样 ${doubaoRows.total||dbRows.length} 条${dbReview?`，待复核 ${dbReview} 条`:''}`:'尚未采样';
+  const dbPanel=`<div class="card elev" style="padding:18px;margin:18px 0 14px;box-shadow:0 0 0 1px rgba(145,132,217,.35)">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap">
+      <div><div style="font-size:15px;font-weight:500">豆包 Web 采样</div>
+        <div style="font-size:11.5px;color:var(--t600);margin-top:4px">真实网页端口径，与豆包方舟 API 分开统计 · ${esc(dbStatus)}</div></div>
+      <div class="row" style="gap:7px">
+        <button class="btn btn-secondary" onclick="window.open('https://www.doubao.com/chat/','_blank')">打开豆包 Web</button>
+        <button class="btn btn-ghost" onclick="go('samples');setTimeout(()=>{SMPF.platform='doubao_web';loadSamples()},0)">查看样本库</button>
+      </div>
+    </div>
+    ${dbRows.length?`<div class="tbl" style="margin-top:12px;max-height:260px;overflow:auto"><table class="table"><thead><tr><th>时间</th><th>问题</th><th>提及</th><th>引用</th><th>状态</th></tr></thead><tbody>
+      ${dbRows.slice(0,8).map(r=>`<tr><td style="font-size:11px;color:var(--t500)">${esc(r.date||'')}</td><td style="font-size:12px;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.question||'')}">${esc(r.question||'')}</td><td><span class="tag ${r.brand_mentioned?'pill-good':'tag-dim'}">${r.brand_mentioned?'已提及':'未提及'}</span></td><td>${r.citations||0}</td><td>${r.needs_review?'<span class="tag tag-accent">待复核</span>':'<span class="tag tag-dim">已记录</span>'}</td></tr>`).join('')}
+    </tbody></table></div>`:'<div style="margin-top:12px;padding:12px;background:var(--deep);border-radius:var(--r-md);font-size:12px;color:var(--t500)">请在豆包 Web 登录专用采样账号，使用 Chrome 采样助手完成提问、提取和上传；上传后刷新本页即可看到结果。</div>'}
+  </div>`;
   return `<div style="padding:32px 44px 72px;max-width:1280px">
     ${head('现状 · 引擎表现','引擎之间的差距，是各自偏好信源的差距','看每个引擎在引用谁——那就是你要去建设的阵地清单。API 采样与网页端结果口径不同，行内已标注是否联网。<span style="color:var(--a300);cursor:pointer" onclick="showMethod()">这些数字怎么算的 →</span>')}
+    ${dbPanel}
     <div class="tbl"><table class="table" style="margin-top:22px"><thead><tr>
       <th style="width:140px">引擎</th><th style="width:70px">样本</th><th style="width:90px">提及率</th>
       <th style="width:90px">提及位次</th><th style="width:120px">引用份额</th>

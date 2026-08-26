@@ -7,6 +7,7 @@
   window.__geolookCollector = true;
 
   const HOST = location.hostname.replace(/^www\./, "");
+  const IS_DOUBAO = HOST === "doubao.com";
 
   // 每站的「答案容器」候选选择器，从前往后试；全部失败退回通用启发式。
   // 选择器会随各家改版失效——失效时提取降级为「选中文本」，功能不消失。
@@ -14,7 +15,15 @@
     "chatgpt.com": ['[data-message-author-role="assistant"]'],
     "chat.openai.com": ['[data-message-author-role="assistant"]'],
     "claude.ai": ['[data-testid="assistant-message"]', ".font-claude-message"],
-    "doubao.com": ['[data-testid="receive_message"]', '[class*="message-content"]'],
+    // 豆包改版频繁：优先语义属性，再按消息/Markdown 容器降级。
+    "doubao.com": [
+      '[data-testid="receive_message"]',
+      '[data-testid*="message"] [class*="content"]',
+      '[class*="message-content"]',
+      '[class*="messageContent"]',
+      '[class*="markdown"]',
+      '[class*="answer"]',
+    ],
     "perplexity.ai": ['[data-testid="answer"]', ".prose", '[class*="prose"]'],
     "gemini.google.com": ["message-content", '[class*="model-response"]'],
     "google.com": ['[data-attrid="AIOverview"]', '[aria-label*="AI 概览"]', '[aria-label*="AI Overview"]'],
@@ -52,6 +61,7 @@
 
   // 出现这些就立刻停：验证码、风控、限流。自动模式撞到任何一条都必须交回给人。
   const BLOCK_CUES = /(验证码|人机验证|安全验证|请稍后再试|访问过于频繁|滑动验证|captcha|verify you are human|unusual activity|rate limit|too many requests)/i;
+  const LOGIN_CUES = /(登录后使用|登录后开始|请先登录|手机号登录|登录\/注册|扫码登录|sign in to continue)/i;
 
   // 新会话入口：每题独立上下文是采样纪律，不能在同一对话里连续问
   const NEWCHAT = {
@@ -188,6 +198,8 @@
   function status(stableMs) {
     const body = document.body ? document.body.innerText || "" : "";
     if (BLOCK_CUES.test(body.slice(0, 4000))) return { state: "blocked", reason: "页面出现验证码/风控提示" };
+    if (IS_DOUBAO && LOGIN_CUES.test(body.slice(0, 2500)) && !pickAnswerEl())
+      return { state: "login", reason: "豆包 Web 需要登录" };
     const el = pickAnswerEl();
     const text = el ? (el.innerText || "") : "";
     const now = Date.now();
@@ -202,6 +214,7 @@
     else if (msg.type === "geolook-fill") sendResponse(fill(String(msg.text || "")));
     else if (msg.type === "geolook-submit") { watch = null; sendResponse(submit(String(msg.text || ""))); }
     else if (msg.type === "geolook-status") sendResponse(status(msg.stableMs));
+    else if (msg.type === "geolook-platform-status") sendResponse(status(0));
     else if (msg.type === "geolook-newchat") sendResponse({ ok: true, url: NEWCHAT[HOST] || "" });
     return false;
   });

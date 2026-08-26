@@ -135,7 +135,10 @@ PROVIDERS = {
 MANUAL_ONLY = {
     "nano_ai": ("纳米AI搜索（360）", "cn"),
     "baidu": ("百度 AI 搜索", "cn"),
-    "doubao_app": ("豆包 App / 网页版（与方舟 API 结果不同，需分开采）", "cn"),
+    # 豆包消费端统一称为 Web；实际可能是桌面网页或移动 Web/App 壳，
+    # 与方舟 API 严格分开。保留 doubao_app 作为旧项目数据的兼容别名。
+    "doubao_web": ("豆包 Web（与方舟 API 结果不同，需分开采）", "cn"),
+    "doubao_app": ("豆包 Web（旧平台码，兼容历史样本）", "cn"),
     "chatgpt": ("ChatGPT 网页版（开 Search）", "global"),
     "claude_web": ("Claude 网页版（开 Web Search）", "global"),
     "google_aio": ("Google AI Overviews（搜索页顶部 AI 摘要，无则记「未触发」）", "global"),

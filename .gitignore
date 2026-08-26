@@ -8,3 +8,6 @@ docs/plans/
 web/
 nohup.out
 .claude/
+.venv
+.vscode/
+AGENTS.md

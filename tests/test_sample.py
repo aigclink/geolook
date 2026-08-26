@@ -104,6 +104,15 @@ class TestMarketOf(unittest.TestCase):
         self.assertEqual(S.market_of("perplexity"), "global")
         self.assertEqual(S.market_of("chatgpt"), "global")
 
+    def test_doubao_web_is_separate_from_api(self):
+        self.assertEqual(S.market_of("doubao_web"), "cn")
+        self.assertEqual(S.label_of("doubao_web"), "豆包 Web（与方舟 API 结果不同，需分开采）")
+        self.assertEqual(S.market_of("doubao"), "cn")
+
+    def test_legacy_doubao_app_code_remains_readable(self):
+        self.assertEqual(S.market_of("doubao_app"), "cn")
+        self.assertIn("旧平台码", S.label_of("doubao_app"))
+
 
 class _Resp:
     def __init__(self, status, payload=None, text=""):
