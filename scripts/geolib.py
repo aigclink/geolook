@@ -400,6 +400,11 @@ def main_text(soup: BeautifulSoup) -> str:
 
 CJK = re.compile(r"[一-鿿]")
 KANA = re.compile(r"[぀-ヿ]")
+# Space-delimited alphabetic scripts beyond Latin (same fix class as issue #3 for Japanese):
+# Hebrew U+0590-U+05FF, Cyrillic U+0400-U+04FF. Counted as regular words alongside Latin.
+ALPHA_WORD = re.compile(r"[A-Za-zЀ-ӿ֐-׿][A-Za-zЀ-ӿ֐-׿'\-]*")
+HEBREW = re.compile(r"[֐-׿]")
+CYRILLIC = re.compile(r"[Ѐ-ӿ]")
 
 
 def cjk_ratio(text: str) -> float:
@@ -415,11 +420,21 @@ def page_language(text: str, lang_attr: str = "") -> str:
     if len(text) < 80:
         la = (lang_attr or "").lower()
         return ("zh" if la.startswith("zh") else "en" if la.startswith("en")
-                else "ja" if la.startswith("ja") else "unknown")
+                else "ja" if la.startswith("ja") else "he" if la.startswith("he")
+                else "ru" if la.startswith("ru") else "unknown")
     # 日文：假名够多且占（假名 + 汉字）比例明显，避免把引用了一两个日语词的中文页判成 ja
     kana = len(KANA.findall(text))
     if kana >= 5 and kana / (kana + len(CJK.findall(text))) > 0.2:
         return "ja"
+    # Hebrew / Cyrillic pages: without this they fall through to "en" with word_count 0
+    # and get dropped by the 120-word threshold in audit.py (same failure mode as issue #3).
+    heb = len(HEBREW.findall(text))
+    latin_words = len(re.findall(r"[A-Za-z][A-Za-z'\-]*", text))
+    if heb >= 25 and heb / (heb + latin_words + len(CJK.findall(text)) + 1) > 0.3:
+        return "he"
+    cyr = len(CYRILLIC.findall(text))
+    if cyr >= 25 and cyr / (cyr + latin_words + len(CJK.findall(text)) + 1) > 0.3:
+        return "ru"
     r = cjk_ratio(text)
     return "zh" if r >= 0.5 else "en" if r <= 0.1 else "mixed"
 
@@ -428,8 +443,8 @@ def word_count(text: str) -> int:
     """中英日混排统一折算成「词」：CJK 1.6 字算 1 词（接近中英信息密度比）。
     假名并入 CJK 统计：假名为主的日文页不算的话词数会被严重低估。"""
     cjk = len(CJK.findall(text)) + len(KANA.findall(text))
-    latin = len(re.findall(r"[A-Za-z][A-Za-z'\-]*", text))
-    return int(cjk / 1.6 + latin)
+    words = len(ALPHA_WORD.findall(text))
+    return int(cjk / 1.6 + words)
 
 
 def jsonld(soup: BeautifulSoup) -> list:
