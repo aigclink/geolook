@@ -163,5 +163,26 @@ class TestAskRetry(unittest.TestCase):
         self.assertEqual(post.call_count, 1)
 
 
+class TestAskHeaders(unittest.TestCase):
+    def _headers(self, platform, env):
+        with mock.patch.dict(os.environ, env), \
+                mock.patch.object(S.requests, "post", return_value=_Resp(200, OK_PAYLOAD)) as post:
+            self.assertTrue(S.ask(platform, "test")["ok"])
+        return post.call_args.kwargs["headers"]
+
+    def test_perplexity_sends_integration_header(self):
+        h = self._headers("perplexity", {"PERPLEXITY_API_KEY": "k"})
+        self.assertEqual(h["X-Pplx-Integration"], "geolook")
+
+    def test_other_platform_has_no_integration_header(self):
+        h = self._headers("deepseek", {"DEEPSEEK_API_KEY": "k"})
+        self.assertNotIn("X-Pplx-Integration", h)
+
+    def test_custom_host_has_no_integration_header(self):
+        with mock.patch.dict(S.PROVIDERS["perplexity"], {"base": "https://api.perplexity.ai.example.com"}):
+            h = self._headers("perplexity", {"PERPLEXITY_API_KEY": "k"})
+        self.assertNotIn("X-Pplx-Integration", h)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -300,12 +300,15 @@ def ask(platform: str, question: str, timeout: int = 120) -> dict:
         "temperature": 0.7,
     }
     body.update(p.get("extra", {}))
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    if urlparse(p["base"]).hostname == "api.perplexity.ai":
+        headers["X-Pplx-Integration"] = "geolook"
     delays = (1, 3)  # 超时/429/5xx 指数退避重试 2 次；其他错误（4xx 等）不重试
     for attempt in range(len(delays) + 1):
         try:
             r = requests.post(
                 f"{p['base']}/chat/completions",
-                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                headers=headers,
                 json=body,
                 timeout=timeout,
             )
