@@ -131,6 +131,10 @@ For public deployments put an HTTPS reverse proxy (nginx/caddy) in front — a t
 git pull        # your data lives in work/ and .env, both gitignored
 ```
 
+### One-click deploy
+
+[![Deploy on RepoCloud](https://d16t0pc4846x52.cloudfront.net/deploylobe.svg)](https://repocloud.io/details/GeoLook/)
+
 ## 5. Usage
 
 ### Route A: fully automated (10–30 min)
